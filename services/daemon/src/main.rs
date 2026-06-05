@@ -1,7 +1,7 @@
 mod storage;
 
 fn main() {
-    storage::database::init_db().unwrap();
+    storage::rustqlite::init_db().unwrap();
 
     
 }
