@@ -1,4 +1,4 @@
-import 'package:desktop/features/sign_up/sign_up_page.dart';
+import 'package:desktop/features/setting_page/setting_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -14,10 +14,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'PixRoot Demo',
-      theme: ThemeData(
-        colorScheme: .fromSeed(seedColor: Colors.grey),
-      ),
-      home: const SignUpPage(),
+      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.grey)),
+      home: const SettingPage(),
     );
   }
 }
