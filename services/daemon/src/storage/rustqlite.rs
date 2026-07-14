@@ -4,16 +4,20 @@ use rusqlite::{Connection,Result};
 pub fn init_db() -> Result<()> {
     let conn =Connection::open("data.db")?;
 
-
+//table of information for authentication
     conn.execute(
         "CREATE TABLE IF NOT EXISTS users (
             user_id TEXT PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
             username TEXT NOT NULL,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            is_login INTEGER NOT NULL DEFAULT 0,
+            warning INTEGER NOT NULL DEFAULT 0,
+            block_apps TEXT
         )",
         [],
     )?;
+//table of attempt
     conn.execute(
         "CREATE TABLE IF NOT EXISTS attempt(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,10 +26,10 @@ pub fn init_db() -> Result<()> {
         date TEXT NOT NULL,
         week_date TEXT NOT NULL,
         time INTEGER NOT NULL
-
         )",
         [],
     )?;
+//table of daily stastus
     conn.execute(
         "CREATE TABLE IF NOT EXISTS daily_status(
         user_id TEXT NOT NULL,
@@ -35,13 +39,6 @@ pub fn init_db() -> Result<()> {
         PRIMARY KEY(user_id, date)
         )",
         [],
-
-
     )?;
-
-
-
-    Ok(())
-
-    
+    Ok(())    
 }
