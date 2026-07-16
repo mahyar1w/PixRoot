@@ -17,7 +17,6 @@ pub fn hasher_password(
 
     Ok(hash)
 }
-
 pub fn verify_password(
     password: &str,
     stored_hash: &str,
@@ -25,18 +24,19 @@ pub fn verify_password(
 
     let parsed_hash = PasswordHash::new(stored_hash)
         .map_err(|e| format!("parse hash error: {e}"))?;
+
     Ok(
         Argon2::default()
             .verify_password(password.as_bytes(), &parsed_hash)
             .is_ok()
     )
 }
-
 // logout functions 
 pub fn logout(
     conn: &Connection,
     user_id: &str,
 ) -> Result<()> {
+
     conn.execute(
         "
         UPDATE users
@@ -45,18 +45,18 @@ pub fn logout(
         ",
         [user_id],
     )?;
+
     Ok(())
 }
-
 pub struct LoggedUser {
     pub user_id: String,
     pub username: String,
 }
-
 // Functions of log_in without pass
 pub fn get_logged_in_user(
     conn: &Connection,
 ) -> Result<Option<LoggedUser>> {
+
     let mut stmt = conn.prepare(
         "
         SELECT user_id, username
@@ -65,6 +65,7 @@ pub fn get_logged_in_user(
         LIMIT 1
         "
     )?;
+
     let mut rows = stmt.query([])?;
 
     if let Some(row) = rows.next()? {
@@ -74,6 +75,7 @@ pub fn get_logged_in_user(
             username: row.get(1)?,
         }));
     }
+
     Ok(None)
 }
 
@@ -82,7 +84,6 @@ pub struct UserData {
     pub username: String,
     pub password_hash: String,
 }
-
 //function for check email in db
 pub fn check_email(
     conn: &Connection,
@@ -110,23 +111,23 @@ pub fn check_email(
 
     Ok(None)
 }
-
 //functions of check pass and login
 pub fn check_password(
     user: &UserData,
     password: &str,
 ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
+
     verify_password(
         password,
         &user.password_hash,
     )
 }
-
 //set login=1
 pub fn set_login(
     conn: &Connection,
     user_id: &str,
 ) -> rusqlite::Result<()> {
+
     conn.execute(
         "
         UPDATE users
@@ -135,18 +136,20 @@ pub fn set_login(
         ",
         [user_id],
     )?;
+
     Ok(())
 }
-
 //function for sign up
 pub fn sign_up(
     email: &str,
     username: &str,
     password: &str,
 )-> std::result::Result<(), Box<dyn std::error::Error>>{
+
     let conn = Connection::open("data.db")?;
     let user_id = Uuid::new_v4().to_string();
     let password_hash=hasher_password(password)?;
+
     conn.execute(
         "
         INSERT INTO users(
@@ -171,9 +174,10 @@ pub fn sign_up(
         ),
     )?;
     println!("user created");
-    Ok(())
-}
 
+    Ok(())
+
+}
 //function of add attempt
 pub fn add_attempt(
     conn: &Connection,
@@ -183,11 +187,13 @@ pub fn add_attempt(
     date: &str,
     time: i32,
 ) -> rusqlite::Result<()> {
+
     conn.execute(
         "INSERT INTO attempt(user_id, status, date, week_date, time)
          VALUES(?1, ?2, ?3, ?4, ?5)",
         (user_id, status, date, week_date, time),
     )?;
+
     Ok(())
 }
 
@@ -200,9 +206,11 @@ pub fn update_daily_status(
     week_date: &str,
     time: i32,
 ) -> rusqlite::Result<()> {
+
     if !status {
         return Ok(());
     }
+
     conn.execute(
         "INSERT INTO daily_status(user_id, date, week_date, totaltime)
          VALUES(?1, ?2, ?3, ?4)
@@ -217,19 +225,18 @@ pub fn update_daily_status(
 
 //function of call other function
 pub fn register_attempt(
+    conn: &Connection,
     user_id: &str,
     status: bool,
-    time: i32
+    time: i32,
 ) -> rusqlite::Result<()> {
 
-    let conn = Connection::open("data.db")?;
+    let date =chrono::Local::now().format("%Y-%m-%d").to_string();
+    let week_date =format!("{:?}",chrono::Local::now().weekday());
 
-    let date = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let week_date = format!("{:?}", chrono::Local::now().weekday());
-
-    add_attempt(&conn, user_id, status, &week_date, &date, time)?;
-    update_daily_status(&conn, user_id, status, &date, &week_date, time)?;
-
+    add_attempt(conn,user_id,status,&week_date,&date,time,)?;
+    update_daily_status(conn,user_id,status,&date,&week_date,time,)?;
+    
     Ok(())
 }
 
@@ -238,7 +245,6 @@ pub struct DayStat {
     pub week_day: String,
     pub minutes: i32,
 }
-//function of get week status for analyze
 pub fn get_week_stats(
     conn: &Connection,
     user_id: &str,
@@ -247,8 +253,12 @@ pub fn get_week_stats(
     let end_date = NaiveDate::parse_from_str(end_date,"%Y-%m-%d").unwrap();
     let mut stats = Vec::new();
     for i in (0..7).rev() {
-        let current_date =end_date - Duration::days(i);
-        let date_str =current_date.format("%Y-%m-%d").to_string();
+
+        let current_date =
+            end_date - Duration::days(i);
+
+        let date_str =
+            current_date.format("%Y-%m-%d").to_string();
         let minutes = conn.query_row(
         "SELECT totaltime
         FROM daily_status
