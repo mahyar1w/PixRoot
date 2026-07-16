@@ -1,7 +1,10 @@
-import 'package:desktop/features/setting_page/setting_page.dart';
+import 'package:desktop/core/assets/aseprite_assets.dart';
+import 'package:desktop/features/home/home_page.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SpriteAssets.preload();
   runApp(const MyApp());
 }
 
@@ -14,8 +17,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'PixRoot Demo',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.grey)),
-      home: const SettingPage(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
+      ),
+      home: const HomePage(),
     );
   }
 }

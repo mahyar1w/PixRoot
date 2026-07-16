@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:desktop/core/assets/aseprite_assets.dart';
+import 'package:desktop/features/home/animation_handling.dart';
+import 'package:desktop/shared/widgets/pixel_animation.dart';
 import 'package:flutter/material.dart';
 
 enum HomePageState { idle, running, finished }
@@ -15,6 +18,7 @@ class _HomePageState extends State<HomePage> {
   double minuteCounter = 0;
   HomePageState state = HomePageState.idle;
   int secondCounter = 0;
+  int separator = 0;
   Timer? timer;
 
   void startTimer() {
@@ -89,6 +93,8 @@ class _HomePageState extends State<HomePage> {
               child: ElevatedButton(
                 onPressed: () {
                   secondCounter = minuteCounter.toInt() * 60;
+                  separator = secondCounter ~/ 10;
+
                   startTimer();
                   setState(() {
                     state = HomePageState.running;
@@ -118,12 +124,15 @@ class _HomePageState extends State<HomePage> {
               fontSize: state == HomePageState.idle ? 80.09 : 97.08,
             ),
           ),
+          // if (state == HomePageState.running)
+          //   Text(
+          //     (secondCounter % 60).toString().padLeft(2, "0"),
+          //     style: TextStyle(fontSize: 16.18),
+          //   ),
+          if (state == HomePageState.idle)
+            PixelAnimation(animation: SpriteAssets.robot_idle, scale: 2),
           if (state == HomePageState.running)
-            Text(
-              (secondCounter % 60).toString().padLeft(2, "0"),
-              style: TextStyle(fontSize: 16.18),
-            ),
-          SizedBox(height: 300),
+            whichAnimation(secondCounter, separator),
           if (state == HomePageState.idle)
             SizedBox(
               width: 400,
@@ -140,25 +149,28 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           SizedBox(height: 50),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    Icon(Icons.timer, size: 30.742),
-                    Text("250 Minutes", style: TextStyle(fontSize: 24.27)),
-                  ],
+              if (state == HomePageState.idle)
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer, size: 30.742),
+                      Text("250 Minutes", style: TextStyle(fontSize: 24.27)),
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: IconButton(
-                  onPressed: () {},
-                  icon: Icon(Icons.forest, size: 30.742),
+              if (state == HomePageState.idle)
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: IconButton(
+                    onPressed: () {},
+                    icon: Icon(Icons.forest, size: 30.742),
+                  ),
                 ),
-              ),
             ],
           ),
         ],
