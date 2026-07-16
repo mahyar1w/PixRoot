@@ -9,6 +9,10 @@ class SocketManager {
   PixrootSockets client;
   final _pendingRequests = <String, Completer<Response>>{};
 
+  final _eventController = StreamController<Event>.broadcast();
+
+  Stream<Event> get events => _eventController.stream;
+
   SocketManager({required this.client}) {
     client.listen(_handleMessage);
   }
@@ -24,15 +28,21 @@ class SocketManager {
   }
 
   void _handleMessage(String message) {
-  final json = jsonDecode(message);
+    final json = jsonDecode(message);
 
-  final response = Response.fromJson(json);
+    if (json.containsKey('event')) {
+      final event = Event.fromJson(json);
+      _eventController.add(event);
+      return;
+    } else if (json.containsKey('action')) {
+      final response = Response.fromJson(json);
 
-  final completer = _pendingRequests[response.action];
+      final completer = _pendingRequests[response.action];
 
-  if (completer != null) {
-    completer.complete(response);
-    _pendingRequests.remove(response.action);
+      if (completer != null) {
+        completer.complete(response);
+        _pendingRequests.remove(response.action);
+      }
+    }
   }
-}
 }

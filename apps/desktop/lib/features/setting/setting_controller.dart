@@ -40,4 +40,11 @@ class SettingController {
     );
     return response.payload['blocked_apps'].toString().split(',');
   }
+
+  Future<List<String>> allApps() async {
+    final response = await manager.sendRequest(
+      AllAppsRequest().toRequest(),
+    );
+    return response.payload['all_apps'] as List<String>;
+  }
 }

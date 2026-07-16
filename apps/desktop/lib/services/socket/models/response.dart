@@ -11,3 +11,17 @@ class Response {
     );
   }
 }
+
+class Event {
+    late final String event;
+    late final Map<String, dynamic> payload;
+
+    Event({required this.event, required this.payload});
+
+    factory Event.fromJson(Map<String, dynamic> json) {
+        return Event(
+            event: json['event'],
+            payload: json['payload'],
+        );
+    }
+}

@@ -104,3 +104,29 @@ class BlockedAppsGetRequest {
     return Request(action: 'get_blocked_apps', payload: {});
   }
 }
+
+class LogoutRequest {
+  Request toRequest() {
+    return Request(action: 'log_out', payload: {});
+  }
+}
+
+class SaveSessionRequest {
+  final double time;
+  final bool success;
+
+  SaveSessionRequest({required this.time, required this.success});
+
+  Request toRequest() {
+    return Request(
+      action: 'save_session',
+      payload: {'success': success, 'time': time},
+    );
+  }
+}
+
+class AllAppsRequest {
+  Request toRequest() {
+    return Request(action: 'all_apps', payload: {});
+  }
+}
