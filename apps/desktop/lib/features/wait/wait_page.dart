@@ -16,6 +16,8 @@ class WaitPage extends StatefulWidget {
 }
 
 class _WaitPageState extends State<WaitPage> {
+  late final manager = context.read<SocketManager>();
+  late final waitPageController = WaitPageController(manager: manager);
 
   @override
   void initState() {
@@ -29,7 +31,7 @@ class _WaitPageState extends State<WaitPage> {
     late final bool isLoggedIn;
     late final String username;
 
-    (isLoggedIn, username) = await WaitPageController(manager: SocketManager(client: PixrootSockets())).checkLogin();
+    (isLoggedIn, username) = await waitPageController.checkLogin();
     
     if (isLoggedIn) {
       context.watch<AppState>().setUsername(username);

@@ -21,15 +21,22 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static final homePageController = HomePageController(
-    manager: SocketManager(client: PixrootSockets()),
-  );
+  late final manager;
+  late final homePageController;
   double minuteCounter = 0;
   double fullTime = 0;
   HomePageState state = HomePageState.idle;
   int secondCounter = 0;
   int separator = 0;
   Timer? timer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    manager = context.read<SocketManager>();
+    homePageController = HomePageController(manager: manager);
+  }
 
   void startTimer() {
     timer?.cancel();

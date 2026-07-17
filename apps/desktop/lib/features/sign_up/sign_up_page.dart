@@ -9,12 +9,11 @@ import 'package:provider/provider.dart';
 class SignUpPage extends StatelessWidget {
   const SignUpPage({super.key});
 
-  static final signUpController = SignUpController(
-    manager: SocketManager(client: PixrootSockets()),
-  );
-
   @override
   Widget build(BuildContext context) {
+    final manager = context.read<SocketManager>();
+
+    final signUpController = SignUpController(manager: manager);
     return Scaffold(
       body: Center(
         child: Column(
@@ -73,7 +72,9 @@ class SignUpPage extends StatelessWidget {
                   );
 
                   if (signUpOkay == true) {
-                    context.watch<AppState>().setUsername(signUpController.usernameField.text);
+                    context.watch<AppState>().setUsername(
+                      signUpController.usernameField.text,
+                    );
                     context.go("/home");
                   } else {}
                 },

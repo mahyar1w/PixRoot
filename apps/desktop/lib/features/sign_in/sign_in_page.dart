@@ -7,12 +7,13 @@ import 'package:provider/provider.dart';
 
 class SignInPage extends StatelessWidget {
   const SignInPage({super.key});
-  static final logInController = LoginController(
-    manager: SocketManager(client: PixrootSockets()),
-  );
+  
 
   @override
   Widget build(BuildContext context) {
+    final manager = context.read<SocketManager>();
+
+    final loginController = LoginController(manager: manager);
     return Scaffold(
       body: Center(
         child: Column(
@@ -21,7 +22,7 @@ class SignInPage extends StatelessWidget {
             SizedBox(
               width: 300,
               child: TextField(
-                controller: logInController.emailField,
+                controller: loginController.emailField,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.email),
                   labelText: "Enter your gmail",
@@ -35,7 +36,7 @@ class SignInPage extends StatelessWidget {
             SizedBox(
               width: 300,
               child: TextField(
-                controller: logInController.passwordField,
+                controller: loginController.passwordField,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.lock),
                   labelText: "Enter your password",
@@ -50,9 +51,9 @@ class SignInPage extends StatelessWidget {
               width: 300,
               child: ElevatedButton(
                 onPressed: () async {
-                  final (logInOkay, username) = await logInController.logIn(
-                    logInController.emailField.text,
-                    logInController.passwordField.text,
+                  final (logInOkay, username) = await loginController.logIn(
+                    loginController.emailField.text,
+                    loginController.passwordField.text,
                   );
                   if (logInOkay == true) {
                     context.watch<AppState>().setUsername(username);

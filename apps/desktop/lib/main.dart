@@ -11,15 +11,22 @@ import 'package:provider/provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SpriteAssets.preload();
-  await Process.start(
-    "/home/hashira/Computer-science/PixRoot/services/daemon/target/debug/database",
-  );
+  // await Process.start(
+  //   "/home/hashira/Computer-science/PixRoot/services/daemon/target/debug/database",
+  //   [],
+  // );
 
   final socket = PixrootSockets();
   await socket.connect();
+
+  final socketManager = SocketManager(client: socket);
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+        Provider(create: (_) => socketManager),
+      ],
       child: const PixRootApp(),
     ),
   );
