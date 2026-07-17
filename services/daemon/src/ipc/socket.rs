@@ -36,35 +36,41 @@ pub fn start_socket_server(snapshot: OpenAppsSnapshot) {
 }
 
 fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
-    // Read the request without blocking until EOF: each connection sends one
-    // JSON message, so read until we would block, then proceed to respond.
+    // Non-blocking reads: each connection may send multiple JSON messages over
+    // its lifetime, so we poll for new inbound bytes and parse complete messages
+    // as they arrive (see `try_parse_message`).
     stream
         .set_read_timeout(Some(std::time::Duration::from_millis(200)))
         .ok();
-    let mut buffer = Vec::new();
+
+    // Accumulated inbound bytes not yet consumed as a complete JSON message.
+    let mut inbound: Vec<u8> = Vec::new();
     let mut chunk = [0u8; 1024];
-    loop {
-        match stream.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(n) => buffer.extend_from_slice(&chunk[..n]),
-            Err(_) => break,
-        }
-        if !buffer.is_empty() {
-            break;
-        }
-    }
-    let buffer = String::from_utf8_lossy(&buffer).to_string();
-    println!("received: {}", buffer);
 
-    match serde_json::from_str::<BaseRequest>(&buffer) {
-        Ok(request) => handle_action(&buffer, &request.action, &mut stream),
-        Err(e) => eprintln!("bad request: {}", e),
-    }
-
-    // Keep the connection open and stream `interrupt` events for newly blocked apps.
+    // Latest set of open apps, used to detect newly opened (blocked) apps.
     let mut last_open: BTreeSet<String> = Default::default();
+
     loop {
-        thread::sleep(Duration::from_millis(500));
+        // (1) Read any new inbound bytes (non-blocking via the read timeout).
+        match stream.read(&mut chunk) {
+            Ok(0) => break, // client disconnected
+            Ok(n) => {
+                inbound.extend_from_slice(&chunk[..n]);
+                // (2) Dispatch every complete JSON message currently buffered.
+                while let Some((msg, rest)) = try_parse_message(&inbound) {
+                    println!("received: {}", msg);
+                    match serde_json::from_str::<BaseRequest>(&msg) {
+                        Ok(request) => handle_action(&msg, &request.action, &mut stream),
+                        Err(e) => eprintln!("bad request: {}", e),
+                    }
+                    inbound = rest;
+                }
+            }
+            Err(_) => {} // timeout / would-block: no new data this tick
+        }
+
+        // (3) Stream `interrupt` events for newly blocked apps.
+        thread::sleep(Duration::from_millis(1200));
         let open: BTreeSet<String> = snapshot.lock().unwrap().iter().cloned().collect();
         let newly_opened: Vec<String> = open.difference(&last_open).cloned().collect();
         last_open = open;
@@ -103,6 +109,21 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
             }
         }
     }
+}
+
+/// Try to parse one complete JSON message from the front of `buf`.
+///
+/// Returns `(parsed_json_string, remaining_bytes)` on success, else `None`.
+/// Non-destructive: partial/unparseable data is left in `buf` for a later call.
+/// Messages are raw JSON with no delimiter (the client writes one complete
+/// object per request), so we parse a `Value` and re-serialize it to recover
+/// the exact consumed byte length.
+fn try_parse_message(buf: &[u8]) -> Option<(String, Vec<u8>)> {
+    let s = String::from_utf8_lossy(buf);
+    let value: serde_json::Value = serde_json::from_str(&s).ok()?;
+    let prefix = serde_json::to_string(&value).ok()?;
+    let rest = buf.get(prefix.len()..).unwrap_or(&[]).to_vec();
+    Some((prefix, rest))
 }
 
 fn blocked_apps_for_logged_in_user() -> Option<std::collections::HashSet<String>> {
