@@ -14,6 +14,9 @@ class PixrootSockets {
   }
 
   void sendMessage(Request message) {
+    if (_socket == null) {
+      throw StateError("Socket is not connected.");
+    }
     if (_socket != null) {
       _socket!.write(jsonEncode(message.toJson()));
     }

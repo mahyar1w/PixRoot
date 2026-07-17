@@ -8,8 +8,8 @@ class AppState extends ChangeNotifier {
   double totalDayTime = 0.0;
   List<String> blockedApps = [];
 
-  void changeWarning() {
-    warning = !warning;
+  void changeWarning(bool value) {
+    warning = value;
     notifyListeners();
   }
 
