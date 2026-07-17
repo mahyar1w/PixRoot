@@ -2,8 +2,14 @@ import 'dart:async';
 
 import 'package:desktop/core/assets/aseprite_assets.dart';
 import 'package:desktop/features/home/animation_handling.dart';
+import 'package:desktop/features/home/home_page_controller.dart';
+import 'package:desktop/services/socket/socket_manager.dart';
+import 'package:desktop/services/socket/pixroot_sockets.dart';
 import 'package:desktop/shared/widgets/pixel_animation.dart';
+import 'package:desktop/state/app_state.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 enum HomePageState { idle, running, finished }
 
@@ -15,7 +21,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static final homePageController = HomePageController(
+    manager: SocketManager(client: PixrootSockets()),
+  );
   double minuteCounter = 0;
+  double fullTime = 0;
   HomePageState state = HomePageState.idle;
   int secondCounter = 0;
   int separator = 0;
@@ -24,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   void startTimer() {
     timer?.cancel();
     timer = null;
+    fullTime = minuteCounter;
 
     timer = Timer.periodic(Duration(seconds: 1), (t) {
       if (secondCounter <= 0) {
@@ -35,6 +46,12 @@ class _HomePageState extends State<HomePage> {
         });
 
         return;
+      } else {
+        final _ = homePageController.endSession();
+        final saveOkay = homePageController.saveSession(true, fullTime);
+        if (saveOkay == true) {
+          return;
+        } else {}
       }
 
       setState(() {
@@ -59,6 +76,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    String username = context.read<AppState>().username ?? "User";
     return Scaffold(
       appBar: AppBar(
         title: Center(child: Text("PixRoot")),
@@ -70,16 +88,46 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       drawer: Drawer(
-        child: ListView(
+        child: Column(
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text("Header"),
+            DrawerHeader(
+              decoration: BoxDecoration(color: Colors.grey),
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Text("Hello, $username", style: TextStyle(fontSize: 24)),
+              ),
             ),
-            ListTile(title: const Text("Settings"), onTap: () {}),
-            ListTile(title: Text("Themes"), onTap: () {}),
-            ListTile(title: Text("License"), onTap: () {}),
-            ListTile(title: Text("About Us"), onTap: () {}),
+            Expanded(
+              child: ListView(
+                children: [
+                  ListTile(
+                    title: const Text("Settings"),
+                    onTap: () {
+                      context.push("/settings");
+                    },
+                  ),
+                  ListTile(title: Text("License"), onTap: () {}),
+                  ListTile(title: Text("About Us"), onTap: () {}),
+                ],
+              ),
+            ),
+            Divider(),
+            ListTile(
+              title: Row(
+                children: [
+                  const Text("LogOut"),
+                  SizedBox(width: 10),
+                  const Icon(Icons.logout),
+                ],
+              ),
+              onTap: () {
+                final logoutOkay = homePageController.logOut();
+                if (logoutOkay == true) {
+                  context.watch<AppState>().setUsername("");
+                  context.go("/welcome");
+                } else {}
+              },
+            ),
           ],
         ),
       ),
@@ -92,13 +140,17 @@ class _HomePageState extends State<HomePage> {
               width: 250,
               child: ElevatedButton(
                 onPressed: () {
-                  secondCounter = minuteCounter.toInt() * 60;
-                  separator = secondCounter ~/ 10;
+                  final startOkay = homePageController.startSession();
 
-                  startTimer();
-                  setState(() {
-                    state = HomePageState.running;
-                  });
+                  if (startOkay == true) {
+                    secondCounter = minuteCounter.toInt() * 60;
+                    separator = secondCounter ~/ 10;
+
+                    startTimer();
+                    setState(() {
+                      state = HomePageState.running;
+                    });
+                  } else {}
                 },
                 child: Text("Start", style: TextStyle(fontSize: 32.36)),
               ),
@@ -108,12 +160,23 @@ class _HomePageState extends State<HomePage> {
               width: 250,
               child: ElevatedButton(
                 onPressed: () {
-                  cancelTimer();
-                  secondCounter = 0;
-                  minuteCounter = 0;
-                  setState(() {
-                    state = HomePageState.idle;
-                  });
+                  final endOkay = homePageController.endSession();
+                  if (endOkay == true) {
+                    cancelTimer();
+                    secondCounter = 0;
+                    minuteCounter = 0;
+                    setState(() {
+                      state = HomePageState.idle;
+                    });
+
+                    showDialog(
+                      context: context,
+                      builder: (_) => FailedSession(),
+                    );
+                    final saveOkay = homePageController.saveSession(false, 0);
+                    if (saveOkay == true) {
+                    } else {}
+                  } else {}
                 },
                 child: Text("Cancel", style: TextStyle(fontSize: 32.36)),
               ),
@@ -124,13 +187,16 @@ class _HomePageState extends State<HomePage> {
               fontSize: state == HomePageState.idle ? 80.09 : 97.08,
             ),
           ),
-          // if (state == HomePageState.running)
-          //   Text(
-          //     (secondCounter % 60).toString().padLeft(2, "0"),
-          //     style: TextStyle(fontSize: 16.18),
-          //   ),
           if (state == HomePageState.idle)
-            PixelAnimation(animation: SpriteAssets.robot_idle, scale: 2),
+            SizedBox(
+              height: 256,
+              width: 256,
+              child: Image.asset(
+                "assets/images/Kharab.png",
+                fit: BoxFit.fill,
+                filterQuality: FilterQuality.none,
+              ),
+            ),
           if (state == HomePageState.running)
             whichAnimation(secondCounter, separator),
           if (state == HomePageState.idle)
@@ -174,6 +240,76 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class FailedSession extends StatelessWidget {
+  const FailedSession({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: SizedBox(
+        width: 700,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(30.0),
+                child: Text(
+                  "You failed :( It's ok, try it next time.",
+                  style: TextStyle(fontSize: 24.27),
+                ),
+              ),
+              SizedBox(
+                height: 512,
+                width: 512,
+                child: Image.asset(
+                  "assets/images/Kharab.png",
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SuccessSession extends StatelessWidget {
+  const SuccessSession({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: SizedBox(
+        width: 700,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "You succeeded! Great job!",
+                style: TextStyle(fontSize: 24.27),
+              ),
+              SizedBox(
+                height: 512,
+                width: 512,
+                child: Image.asset(
+                  "assets/images/salem_nochain.png",
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.none,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

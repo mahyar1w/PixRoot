@@ -1,8 +1,14 @@
 import 'package:desktop/services/socket/models/request.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
+import 'package:flutter/material.dart';
 
 class SignUpController {
   late final SocketManager manager;
+  
+  late final usernameField = TextEditingController();
+  late final emailField = TextEditingController();
+  late final passwordField = TextEditingController();
+
   SignUpController({required this.manager});
 
   Future<bool> signUp(String username, String email, String password) async {

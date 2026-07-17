@@ -1,7 +1,16 @@
+import 'package:desktop/features/welcome/welcome_controller.dart';
+import 'package:desktop/services/socket/pixroot_sockets.dart';
+import 'package:desktop/services/socket/socket_manager.dart';
+import 'package:desktop/shared/widgets/pixel_animation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
+  static final welcomeController = WelcomeController(
+    manager: SocketManager(client: PixrootSockets()),
+  );
+  static final emailController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -14,17 +23,43 @@ class WelcomePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                SizedBox(
+                  width: 256,
+                  height: 256,
+                  child: Image.asset(
+                    'assets/images/salem_nochain.png',
+                    fit: BoxFit.fill,
+                    filterQuality: FilterQuality.none,
+                  ),
+                ),
                 TextField(
+                  controller: emailController,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.email),
                     labelText: "Enter your gmail",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20))
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
                 SizedBox(height: 5),
-                SizedBox(width: 300,
-                height: 45,
-                child: ElevatedButton(onPressed: () {}, child: Text("Start")))
+                SizedBox(
+                  width: 300,
+                  height: 45,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final hasAccount = await welcomeController.checkEmail(
+                        emailController.text,
+                      );
+                      if (hasAccount == true) {
+                        context.push("/login");
+                      } else {
+                        context.push("/register");
+                      }
+                    },
+                    child: Text("Start"),
+                  ),
+                ),
               ],
             ),
           ),

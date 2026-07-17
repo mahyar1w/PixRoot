@@ -1,5 +1,7 @@
 import 'package:desktop/services/socket/models/request.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class WelcomeController {
   late final SocketManager manager;
