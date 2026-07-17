@@ -1,5 +1,5 @@
 use rusqlite::{Connection, Result};
-use chrono::{NaiveDate,Local,Datelike,Duration};
+use chrono::{NaiveDate,Datelike,Duration};
 use uuid::Uuid;
 use argon2::{Argon2,PasswordHasher,password_hash::{SaltString,PasswordHash,PasswordVerifier,rand_core::OsRng,},};
 
@@ -237,7 +237,55 @@ pub fn register_attempt(
     add_attempt(conn,user_id,status,&week_date,&date,time,)?;
     update_daily_status(conn,user_id,status,&date,&week_date,time,)?;
     
+     Ok(())
+}
+
+// set blocked apps (comma joined string) for the logged in user
+pub fn set_blocked_apps(
+    conn: &Connection,
+    blocked_apps: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE users SET block_apps = ?1 WHERE is_login = 1",
+        [blocked_apps],
+    )?;
     Ok(())
+}
+
+// get blocked apps (comma joined string) for the logged in user
+pub fn get_blocked_apps(
+    conn: &Connection,
+) -> rusqlite::Result<String> {
+    let result: Result<String> = conn.query_row(
+        "SELECT block_apps FROM users WHERE is_login = 1 LIMIT 1",
+        [],
+        |row| row.get(0),
+    );
+    Ok(result.unwrap_or_default())
+}
+
+// set warning flag for the logged in user
+pub fn set_warning(
+    conn: &Connection,
+    warning: bool,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE users SET warning = ?1 WHERE is_login = 1",
+        [warning as i32],
+    )?;
+    Ok(())
+}
+
+// get warning flag for the logged in user
+pub fn get_warning(
+    conn: &Connection,
+) -> rusqlite::Result<bool> {
+    let result: Result<i32> = conn.query_row(
+        "SELECT warning FROM users WHERE is_login = 1 LIMIT 1",
+        [],
+        |row| row.get(0),
+    );
+    Ok(result.unwrap_or(0) != 0)
 }
 
 pub struct DayStat {

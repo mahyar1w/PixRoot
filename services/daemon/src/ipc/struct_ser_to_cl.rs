@@ -137,3 +137,52 @@ pub struct LogOut {
     pub action: String,
     pub payload: LogOutPayload,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct StartSessionPayload {
+    pub status: String,
+    pub error: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct StartSession {
+    pub action: String,
+    pub payload: StartSessionPayload,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EndSessionPayload {
+    pub status: String,
+    pub error: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EndSession {
+    pub action: String,
+    pub payload: EndSessionPayload,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AllAppsPayload {
+    pub status: String,
+    pub all_apps: Vec<String>,
+    pub error: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AllApps {
+    pub action: String,
+    pub payload: AllAppsPayload,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InterruptPayload {
+    pub warning: bool,
+    pub stage: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Interrupt {
+    pub event: String,
+    pub payload: InterruptPayload,
+}

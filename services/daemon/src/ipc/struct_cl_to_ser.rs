@@ -97,6 +97,29 @@ pub struct SaveSession {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct StartSession {
+    pub action: String,
+    pub payload: EmptyPayload,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EndSessionPayload {
+    pub duration: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EndSession {
+    pub action: String,
+    pub payload: EndSessionPayload,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AllApps {
+    pub action: String,
+    pub payload: EmptyPayload,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct LogOut {
     pub action: String,
     pub payload: EmptyPayload,

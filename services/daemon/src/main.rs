@@ -1,7 +1,11 @@
-mod storage;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 fn main() {
-    storage::rustqlite::init_db().unwrap();
+    database::storage::rustqlite::init_db().unwrap();
 
-    
+    let snapshot = Arc::new(Mutex::new(Vec::<String>::new()));
+    database::detectors::toplevel::monitor::start_monitor(Duration::from_secs(3), snapshot.clone());
+
+    database::ipc::socket::start_socket_server(snapshot);
 }
