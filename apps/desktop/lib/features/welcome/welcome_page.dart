@@ -1,7 +1,5 @@
 import 'package:desktop/features/welcome/welcome_controller.dart';
-import 'package:desktop/services/socket/pixroot_sockets.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
-import 'package:desktop/shared/widgets/pixel_animation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';

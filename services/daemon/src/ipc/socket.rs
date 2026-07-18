@@ -119,11 +119,14 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
 /// object per request), so we parse a `Value` and re-serialize it to recover
 /// the exact consumed byte length.
 fn try_parse_message(buf: &[u8]) -> Option<(String, Vec<u8>)> {
-    let s = String::from_utf8_lossy(buf);
-    let value: serde_json::Value = serde_json::from_str(&s).ok()?;
-    let prefix = serde_json::to_string(&value).ok()?;
-    let rest = buf.get(prefix.len()..).unwrap_or(&[]).to_vec();
-    Some((prefix, rest))
+    let pos = buf.iter().position(|&b| b == b'\n')?;
+    let msg_bytes = &buf[..pos];
+    let s = std::str::from_utf8(msg_bytes).ok()?;
+
+    let _value: serde_json::Value = serde_json::from_str(s).ok()?;
+
+    let rest = buf[pos + 1..].to_vec();
+    Some((s.to_string(), rest))
 }
 
 fn blocked_apps_for_logged_in_user() -> Option<std::collections::HashSet<String>> {

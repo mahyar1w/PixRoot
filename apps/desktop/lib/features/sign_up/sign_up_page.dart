@@ -1,5 +1,4 @@
 import 'package:desktop/features/sign_up/sign_up_controller.dart';
-import 'package:desktop/services/socket/pixroot_sockets.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
 import 'package:desktop/state/app_state.dart';
 import 'package:flutter/material.dart';
@@ -71,12 +70,14 @@ class SignUpPage extends StatelessWidget {
                     signUpController.passwordField.text,
                   );
 
-                  if (signUpOkay == true) {
-                    context.watch<AppState>().setUsername(
+                  if (signUpOkay.$1 == true) {
+                    context.read<AppState>().setUsername(
                       signUpController.usernameField.text,
                     );
                     context.go("/home");
-                  } else {}
+                  } else {
+                    print('signup failed: ${signUpOkay.$2}');
+                  }
                 },
                 child: Text("Sign Up"),
               ),

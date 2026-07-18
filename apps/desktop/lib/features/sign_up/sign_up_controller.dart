@@ -11,14 +11,14 @@ class SignUpController {
 
   SignUpController({required this.manager});
 
-  Future<bool> signUp(String username, String email, String password) async {
+  Future<(bool, String)> signUp(String username, String email, String password) async {
     final response = await manager.sendRequest(
       SignUpRequest(username: username, email: email, password: password).toRequest(),
     );
     if (response.payload['status'] == 'ok') {
-      return true;
+      return (true, '');
     } else {
-      return false;
+      return (false, response.payload['error'] as String);
     }
   }
 }

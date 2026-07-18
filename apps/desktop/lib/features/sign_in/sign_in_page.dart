@@ -1,5 +1,4 @@
 import 'package:desktop/features/sign_in/sign_in_controller.dart';
-import 'package:desktop/services/socket/pixroot_sockets.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
 import 'package:desktop/state/app_state.dart';
 import 'package:flutter/material.dart';

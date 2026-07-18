@@ -1,6 +1,5 @@
 import 'package:desktop/core/assets/aseprite_assets.dart';
 import 'package:desktop/features/wait/wait_page_controller.dart';
-import 'package:desktop/services/socket/pixroot_sockets.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
 import 'package:desktop/shared/widgets/pixel_animation.dart';
 import 'package:desktop/state/app_state.dart';
@@ -34,7 +33,7 @@ class _WaitPageState extends State<WaitPage> {
     (isLoggedIn, username) = await waitPageController.checkLogin();
     
     if (isLoggedIn) {
-      context.watch<AppState>().setUsername(username);
+      context.read<AppState>().setUsername(username);
       context.go("/home");
       return;
     } else {
