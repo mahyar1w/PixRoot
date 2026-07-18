@@ -28,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   HomePageState state = HomePageState.idle;
   int secondCounter = 0;
   int separator = 0;
+  int totalDayTime = 0;
   Timer? timer;
 
   @override
@@ -35,7 +36,24 @@ class _HomePageState extends State<HomePage> {
     super.didChangeDependencies();
 
     manager = context.read<SocketManager>();
-    homePageController = HomePageController(manager: manager);
+    homePageController = HomePageController(manager: manager, appState: context.read<AppState>());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnalyz();
+  }
+
+  Future<void> _loadAnalyz() async {
+
+    // add the request for getting the total day time for the first time opening app in a day
+
+    if (!mounted) return;
+
+    setState(() {
+      context.read<AppState>().updateTotalDayTime(totalDayTime);
+    });
   }
 
   void startTimer() {
@@ -79,6 +97,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     timer?.cancel();
     super.dispose();
+    homePageController.dispose();
   }
 
   @override
@@ -232,7 +251,7 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     children: [
                       Icon(Icons.timer, size: 30.742),
-                      Text("250 Minutes", style: TextStyle(fontSize: 24.27)),
+                      Text("$totalDayTime Minutes", style: TextStyle(fontSize: 24.27)),
                     ],
                   ),
                 ),

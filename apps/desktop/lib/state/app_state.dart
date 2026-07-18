@@ -5,8 +5,10 @@ class AppState extends ChangeNotifier {
   String? username;
   bool warning = true;
   bool intrrupt = false;
-  double totalDayTime = 0.0;
+  int totalDayTime = 0;
   List<String> blockedApps = [];
+
+  bool showNotif = false;
 
   void changeWarning(bool value) {
     warning = value;
@@ -28,8 +30,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateTotalDayTime(double time) {
+  void updateTotalDayTime(int time) {
     totalDayTime += time;
+    notifyListeners();
+  }
+
+  void changeNotif() {
+    showNotif = !showNotif;
     notifyListeners();
   }
 }
