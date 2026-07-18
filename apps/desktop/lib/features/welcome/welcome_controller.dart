@@ -5,14 +5,14 @@ class WelcomeController {
 
   WelcomeController({required this.manager});
 
-  Future<bool> checkEmail(String email) async {
+  Future<(bool, String)> checkEmail(String email) async {
     final response = await manager.sendRequest(
       CheckEmailRequest(email: email).toRequest(),
     );
     if (response.payload['status'] == 'ok') {
-      return true;
+      return (true, '');
     } else {
-      return false;
+      return (false, response.payload['error'] as String);
     }
   }
 }

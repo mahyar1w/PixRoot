@@ -15,8 +15,8 @@ class _SettingPageState extends State<SettingPage> {
   late final settingPageController;
   late final manager;
   late bool warning;
-  late List<String> block_apps;
-  late List<String> all_apps;
+  late List<dynamic> block_apps;
+  late List<dynamic> all_apps;
   bool loading = true;
 
   @override
@@ -52,7 +52,7 @@ class _SettingPageState extends State<SettingPage> {
     if (loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Center(
@@ -99,19 +99,21 @@ class _SettingPageState extends State<SettingPage> {
                         ),
                         ElevatedButton(
                           onPressed: () async {
-                            final List<String> result = await showDialog(
+                            final result = await showDialog(
                               context: context,
                               builder: (_) => SelectedApps(
                                 selected_apps: List.from(block_apps),
                                 all_apps: all_apps,
                               ),
                             );
-                            context.read<AppState>().setBlockedApps(result);
-                            block_apps = context.read<AppState>().blockedApps;
-                            final changeListOkay = await settingPageController
-                                .setBlockedApps(block_apps);
-                            if (changeListOkay == true) {
-                            } else {}
+                            if (result != null) {
+                              context.read<AppState>().setBlockedApps(result);
+                              block_apps = context.read<AppState>().blockedApps;
+                              final changeListOkay = await settingPageController
+                                  .setBlockedApps(block_apps);
+                              if (changeListOkay == true) {
+                              } else {}
+                            }
                           },
                           child: Text("Launch apps"),
                         ),
@@ -165,8 +167,8 @@ class _SettingPageState extends State<SettingPage> {
 }
 
 class SelectedApps extends StatefulWidget {
-  final List<String> selected_apps;
-  final List<String> all_apps;
+  final List<dynamic> selected_apps;
+  final List<dynamic> all_apps;
 
   const SelectedApps({
     super.key,

@@ -6,7 +6,7 @@ class AppState extends ChangeNotifier {
   bool warning = true;
   bool intrrupt = false;
   int totalDayTime = 0;
-  List<String> blockedApps = [];
+  List<dynamic> blockedApps = [];
 
   bool showNotif = false;
 
@@ -15,7 +15,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setBlockedApps(List<String> apps) {
+  void setBlockedApps(List<dynamic> apps) {
     blockedApps = apps;
     notifyListeners();
   }

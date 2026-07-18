@@ -81,7 +81,7 @@ class WarningSetRequest {
 }
 
 class BlockedAppsSetRequest {
-  final List<String> blockedApps;
+  final List<dynamic> blockedApps;
 
   BlockedAppsSetRequest({required this.blockedApps});
 
@@ -112,7 +112,7 @@ class LogoutRequest {
 }
 
 class SaveSessionRequest {
-  final double time;
+  final int time;
   final bool success;
 
   SaveSessionRequest({required this.time, required this.success});

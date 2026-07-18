@@ -23,32 +23,32 @@ class HomePageController {
     }
   }
 
-  Future<bool> endSession() async {
+  Future<(bool, String)> endSession() async {
     final response = await manager.sendRequest(EndSessionRequest().toRequest());
     if (response.payload['status'] == 'ok') {
-      return true;
+      return (true, '');
     } else {
-      return false;
+      return (false, response.payload['error'] as String);
     }
   }
 
-  Future<bool> logOut() async {
+  Future<(bool, String)> logOut() async {
     final response = await manager.sendRequest(LogoutRequest().toRequest());
     if (response.payload['status'] == 'ok') {
-      return true;
+      return (true, '');
     } else {
-      return false;
+      return (false, response.payload['error'] as String);
     }
   }
 
-  Future<bool> saveSession(bool success, double time) async {
+  Future<(bool, String)> saveSession(bool success, int time) async {
     final response = await manager.sendRequest(
       SaveSessionRequest(time: time, success: success).toRequest(),
     );
     if (response.payload['status'] == 'ok') {
-      return true;
+      return (true, '');
     } else {
-      return false;
+      return (false, response.payload['error'] as String);
     }
   }
 

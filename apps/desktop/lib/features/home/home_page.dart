@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
   late final manager;
   late final homePageController;
   double minuteCounter = 0;
-  double fullTime = 0;
+  int fullTime = 0;
   HomePageState state = HomePageState.idle;
   int secondCounter = 0;
   int separator = 0;
@@ -33,7 +33,10 @@ class _HomePageState extends State<HomePage> {
     super.didChangeDependencies();
 
     manager = context.read<SocketManager>();
-    homePageController = HomePageController(manager: manager, appState: context.read<AppState>());
+    homePageController = HomePageController(
+      manager: manager,
+      appState: context.read<AppState>(),
+    );
   }
 
   @override
@@ -43,37 +46,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadAnalyz() async {
-
     // add the request for getting the total day time for the first time opening app in a day
 
     if (!mounted) return;
 
     setState(() {
-      context.read<AppState>().updateTotalDayTime(totalDayTime);
+      totalDayTime = context.read<AppState>().totalDayTime;
     });
   }
 
   void startTimer() {
     timer?.cancel();
     timer = null;
-    fullTime = minuteCounter;
+    fullTime = minuteCounter.toInt();
 
     timer = Timer.periodic(Duration(seconds: 1), (t) {
       if (secondCounter <= 0) {
         t.cancel();
         timer = null;
-
-        setState(() {
-          state = HomePageState.idle;
-        });
-
+        _endIt();
         return;
-      } else {
-        final _ = homePageController.endSession();
-        final saveOkay = homePageController.saveSession(true, fullTime);
-        if (saveOkay == true) {
-          return;
-        } else {}
       }
 
       setState(() {
@@ -83,6 +75,26 @@ class _HomePageState extends State<HomePage> {
         secondCounter--;
       });
     });
+  }
+
+  Future<void> _endIt() async {
+    final endOkay = await homePageController.endSession();
+    if (endOkay.$1) {
+      final saveOkay = await homePageController.saveSession(true, fullTime);
+      if (saveOkay.$1 == true) {
+        if (mounted) {
+          setState(() {
+            state = HomePageState.idle;
+          });
+          showDialog(context: context, builder: (_) => SuccessSession());
+        }
+        return;
+      } else {
+        print(saveOkay.$2);
+      }
+    } else {
+      print(endOkay.$2);
+    }
   }
 
   void cancelTimer() {
@@ -143,12 +155,14 @@ class _HomePageState extends State<HomePage> {
                   const Icon(Icons.logout),
                 ],
               ),
-              onTap: () {
-                final logoutOkay = homePageController.logOut();
-                if (logoutOkay == true) {
-                  context.watch<AppState>().setUsername("");
+              onTap: () async {
+                final logoutOkay = await homePageController.logOut();
+                if (logoutOkay.$1 == true) {
+                  context.read<AppState>().setUsername("");
                   context.go("/welcome");
-                } else {}
+                } else {
+                  print(logoutOkay.$2);
+                }
               },
             ),
           ],
@@ -162,8 +176,8 @@ class _HomePageState extends State<HomePage> {
             SizedBox(
               width: 250,
               child: ElevatedButton(
-                onPressed: () {
-                  final startOkay = homePageController.startSession();
+                onPressed: () async {
+                  final startOkay = await homePageController.startSession();
 
                   if (startOkay.$1 == true) {
                     secondCounter = minuteCounter.toInt() * 60;
@@ -184,9 +198,9 @@ class _HomePageState extends State<HomePage> {
             SizedBox(
               width: 250,
               child: ElevatedButton(
-                onPressed: () {
-                  final endOkay = homePageController.endSession();
-                  if (endOkay == true) {
+                onPressed: () async {
+                  final endOkay = await homePageController.endSession();
+                  if (endOkay.$1 == true) {
                     cancelTimer();
                     secondCounter = 0;
                     minuteCounter = 0;
@@ -198,10 +212,17 @@ class _HomePageState extends State<HomePage> {
                       context: context,
                       builder: (_) => FailedSession(),
                     );
-                    final saveOkay = homePageController.saveSession(false, 0);
-                    if (saveOkay == true) {
-                    } else {}
-                  } else {}
+                    final saveOkay = await homePageController.saveSession(
+                      false,
+                      0,
+                    );
+                    if (saveOkay.$1 == true) {
+                    } else {
+                      print(saveOkay.$2);
+                    }
+                  } else {
+                    print(endOkay.$2);
+                  }
                 },
                 child: Text("Cancel", style: TextStyle(fontSize: 32.36)),
               ),
@@ -250,7 +271,10 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     children: [
                       Icon(Icons.timer, size: 30.742),
-                      Text("$totalDayTime Minutes", style: TextStyle(fontSize: 24.27)),
+                      Text(
+                        "$totalDayTime Minutes",
+                        style: TextStyle(fontSize: 24.27),
+                      ),
                     ],
                   ),
                 ),
@@ -319,9 +343,12 @@ class SuccessSession extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                "You succeeded! Great job!",
-                style: TextStyle(fontSize: 24.27),
+              Padding(
+                padding: const EdgeInsets.all(30.0),
+                child: Text(
+                  "You succeeded! Great job!",
+                  style: TextStyle(fontSize: 24.27),
+                ),
               ),
               SizedBox(
                 height: 512,

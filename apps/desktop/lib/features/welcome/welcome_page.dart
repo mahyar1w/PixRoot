@@ -50,9 +50,10 @@ class WelcomePage extends StatelessWidget {
                       final hasAccount = await welcomeController.checkEmail(
                         emailController.text,
                       );
-                      if (hasAccount == true) {
+                      if (hasAccount.$1 == true) {
                         context.push("/login");
                       } else {
+                        print(hasAccount.$2);
                         context.push("/register");
                       }
                     },

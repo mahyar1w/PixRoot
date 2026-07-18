@@ -16,7 +16,7 @@ class SettingController {
     }
   }
 
-  Future<bool> setBlockedApps(List<String> blockedApps) async {
+  Future<bool> setBlockedApps(List<dynamic> blockedApps) async {
     final response = await manager.sendRequest(
       BlockedAppsSetRequest(blockedApps: blockedApps).toRequest(),
     );
@@ -34,17 +34,17 @@ class SettingController {
     return response.payload['warning'];
   }
 
-  Future<List<String>> getBlockedApps() async {
+  Future<List<dynamic>> getBlockedApps() async {
     final response = await manager.sendRequest(
       BlockedAppsGetRequest().toRequest(),
     );
     return response.payload['blocked_apps'].toString().split(',');
   }
 
-  Future<List<String>> allApps() async {
+  Future<List<dynamic>> allApps() async {
     final response = await manager.sendRequest(
       AllAppsRequest().toRequest(),
     );
-    return response.payload['all_apps'] as List<String>;
+    return response.payload['all_apps'];
   }
 }
