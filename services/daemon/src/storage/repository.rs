@@ -1,4 +1,5 @@
 use rusqlite::{Connection, Result};
+use crate::storage::rustqlite::db_path;
 use chrono::{NaiveDate,Datelike,Duration};
 use uuid::Uuid;
 use argon2::{Argon2,PasswordHasher,password_hash::{SaltString,PasswordHash,PasswordVerifier,rand_core::OsRng,},};
@@ -146,7 +147,7 @@ pub fn sign_up(
     password: &str,
 )-> std::result::Result<(), Box<dyn std::error::Error>>{
 
-    let conn = Connection::open("data.db")?;
+    let conn = Connection::open(db_path())?;
     let user_id = Uuid::new_v4().to_string();
     let password_hash=hasher_password(password)?;
 

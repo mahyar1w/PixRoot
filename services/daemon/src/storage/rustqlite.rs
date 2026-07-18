@@ -1,8 +1,17 @@
 use rusqlite::{Connection,Result};
+use std::path::PathBuf;
+
+// Absolute path to the database, located next to the daemon binary.
+pub fn db_path() -> PathBuf {
+    let mut p = std::env::current_exe().expect("failed to determine executable path");
+    p.pop();
+    p.push("data.db");
+    p
+}
 
 //function of create tables
 pub fn init_db() -> Result<()> {
-    let conn =Connection::open("data.db")?;
+    let conn =Connection::open(db_path())?;
 
 //table of information for authentication
     conn.execute(

@@ -13,6 +13,7 @@ use crate::detectors::toplevel::monitor::OpenAppsSnapshot;
 use crate::ipc::struct_cl_to_ser::BaseRequest;
 use crate::ipc::struct_ser_to_cl::Interrupt;
 use crate::storage::repository;
+use crate::storage::rustqlite::db_path;
 
 const SOCKET_PATH: &str = "/tmp/focus_app.sock";
 
@@ -130,7 +131,7 @@ fn try_parse_message(buf: &[u8]) -> Option<(String, Vec<u8>)> {
 }
 
 fn blocked_apps_for_logged_in_user() -> Option<std::collections::HashSet<String>> {
-    let conn = Connection::open("data.db").ok()?;
+    let conn = Connection::open(db_path()).ok()?;
     let raw = repository::get_blocked_apps(&conn).ok()?;
     if raw.trim().is_empty() {
         return Some(Default::default());
@@ -139,7 +140,7 @@ fn blocked_apps_for_logged_in_user() -> Option<std::collections::HashSet<String>
 }
 
 fn warning_for_logged_in_user() -> Option<bool> {
-    let conn = Connection::open("data.db").ok()?;
+    let conn = Connection::open(db_path()).ok()?;
     repository::get_warning(&conn).ok()
 }
 
@@ -148,7 +149,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         "check_email" => {
             let req: crate::ipc::struct_cl_to_ser::CheckEmail =
                 serde_json::from_str(buffer).unwrap();
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
 
             match repository::check_email(&conn, &req.payload.email) {
                 Ok(Some(_user)) => send(
@@ -218,7 +219,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         "login" => {
             let req: crate::ipc::struct_cl_to_ser::Login =
                 serde_json::from_str(buffer).unwrap();
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::check_email(&conn, &req.payload.email) {
                 Ok(Some(user)) => match repository::check_password(&user, &req.payload.password) {
                     Ok(true) => {
@@ -285,7 +286,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
 
         "check_login" => {
             println!("check login request");
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::get_logged_in_user(&conn) {
                 Ok(Some(user)) => send(
                     stream,
@@ -326,7 +327,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         "save_session" => {
             let req: crate::ipc::struct_cl_to_ser::SaveSession =
                 serde_json::from_str(buffer).unwrap();
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
 
             match repository::get_logged_in_user(&conn) {
                 Ok(Some(user)) => match repository::register_attempt(
@@ -424,7 +425,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         "set_blocked_apps" => {
             let req: crate::ipc::struct_cl_to_ser::SetBlockedApp =
                 serde_json::from_str(buffer).unwrap();
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::set_blocked_apps(&conn, &req.payload.blocked_apps) {
                 Ok(_) => send(
                     stream,
@@ -450,7 +451,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         }
 
         "get_blocked_apps" => {
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::get_blocked_apps(&conn) {
                 Ok(blocked) => send(
                     stream,
@@ -476,7 +477,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         "set_warning" => {
             let req: crate::ipc::struct_cl_to_ser::SetWarning =
                 serde_json::from_str(buffer).unwrap();
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::set_warning(&conn, req.payload.warning) {
                 Ok(_) => send(
                     stream,
@@ -502,7 +503,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         }
 
         "get_warning" => {
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::get_warning(&conn) {
                 Ok(warning) => send(
                     stream,
@@ -524,7 +525,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
         }
 
         "log_out" => {
-            let conn = Connection::open("data.db").unwrap();
+            let conn = Connection::open(db_path()).unwrap();
             match repository::get_logged_in_user(&conn) {
                 Ok(Some(user)) => match repository::logout(&conn, &user.user_id) {
                     Ok(_) => send(
