@@ -12,14 +12,14 @@ class HomePageController {
     _subscription = manager.events.listen(_handleEvent);
   }
 
-  Future<bool> startSession() async {
+  Future<(bool, String)> startSession() async {
     final response = await manager.sendRequest(
       StartSessionRequest().toRequest(),
     );
     if (response.payload['status'] == 'ok') {
-      return true;
+      return (true, '');
     } else {
-      return false;
+      return (false, response.payload['error'] as String);
     }
   }
 

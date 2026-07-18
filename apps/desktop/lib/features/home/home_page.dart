@@ -165,7 +165,7 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   final startOkay = homePageController.startSession();
 
-                  if (startOkay == true) {
+                  if (startOkay.$1 == true) {
                     secondCounter = minuteCounter.toInt() * 60;
                     separator = secondCounter ~/ 10;
 
@@ -173,7 +173,9 @@ class _HomePageState extends State<HomePage> {
                     setState(() {
                       state = HomePageState.running;
                     });
-                  } else {}
+                  } else {
+                    print(startOkay.$2);
+                  }
                 },
                 child: Text("Start", style: TextStyle(fontSize: 32.36)),
               ),
