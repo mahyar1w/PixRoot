@@ -326,17 +326,24 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
 
         "save_session" => {
             let req: crate::ipc::struct_cl_to_ser::SaveSession =
-                serde_json::from_str(buffer).unwrap();
+            serde_json::from_str(buffer).unwrap();
+
             let conn = Connection::open(db_path()).unwrap();
 
-            match repository::get_logged_in_user(&conn) {
-                Ok(Some(user)) => match repository::register_attempt(
+        match repository::get_logged_in_user(&conn) {
+
+            Ok(Some(user)) => {
+
+                match repository::register_attempt(
                     &conn,
                     &user.user_id,
                     req.payload.success,
                     req.payload.time,
-                ) {
-                    Ok(_) => send(
+            ) {
+
+                Ok(_) => {
+
+                    send(
                         stream,
                         crate::ipc::struct_ser_to_cl::SaveSession {
                             action: "save_session".to_string(),
@@ -345,8 +352,47 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                                 error: "".to_string(),
                             },
                         },
-                    ),
-                    Err(e) => send(
+                    );
+
+                    match repository::get_total_day_time(
+                        &conn,
+                        &user.user_id,
+                    ) {
+
+                        Ok(total_time) => {
+
+                            send(
+                                stream,
+                                crate::ipc::struct_ser_to_cl::TotalDayTime {
+                                    action: "total_day_time".to_string(),
+                                    payload: crate::ipc::struct_ser_to_cl::TotalDayTimePayload {
+                                        status: "ok".to_string(),
+                                        total_focus: total_time,
+                                        error: "".to_string(),
+                                    },
+                                },
+                            );
+                        }
+
+                        Err(e) => {
+
+                            send(
+                                stream,
+                                crate::ipc::struct_ser_to_cl::TotalDayTime {
+                                    action: "total_day_time".to_string(),
+                                    payload: crate::ipc::struct_ser_to_cl::TotalDayTimePayload {
+                                        status: "error".to_string(),
+                                        total_focus: 0,
+                                        error: e.to_string(),
+                                    },
+                                },
+                            );
+                        }
+                    }
+                }
+
+                Err(e) => {
+                    send(
                         stream,
                         crate::ipc::struct_ser_to_cl::SaveSession {
                             action: "save_session".to_string(),
@@ -355,30 +401,38 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                                 error: e.to_string(),
                             },
                         },
-                    ),
-                },
-                Ok(None) => send(
-                    stream,
-                    crate::ipc::struct_ser_to_cl::SaveSession {
-                        action: "save_session".to_string(),
-                        payload: crate::ipc::struct_ser_to_cl::SaveSessionPayload {
-                            status: "no acount logined".to_string(),
-                            error: "".to_string(),
-                        },
-                    },
-                ),
-                Err(e) => send(
-                    stream,
-                    crate::ipc::struct_ser_to_cl::SaveSession {
-                        action: "save_session".to_string(),
-                        payload: crate::ipc::struct_ser_to_cl::SaveSessionPayload {
-                            status: "error".to_string(),
-                            error: e.to_string(),
-                        },
-                    },
-                ),
+                    );
+                }
             }
         }
+
+        Ok(None) => {
+            send(
+                stream,
+                crate::ipc::struct_ser_to_cl::SaveSession {
+                    action: "save_session".to_string(),
+                    payload: crate::ipc::struct_ser_to_cl::SaveSessionPayload {
+                        status: "no account logged".to_string(),
+                        error: "".to_string(),
+                    },
+                },
+            );
+        }
+
+        Err(e) => {
+            send(
+                stream,
+                crate::ipc::struct_ser_to_cl::SaveSession {
+                    action: "save_session".to_string(),
+                    payload: crate::ipc::struct_ser_to_cl::SaveSessionPayload {
+                        status: "error".to_string(),
+                        error: e.to_string(),
+                    },
+                },
+            );
+        }
+    }
+}
 
         "start_session" => {
             send(

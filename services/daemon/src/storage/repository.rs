@@ -276,6 +276,30 @@ pub fn set_warning(
     )?;
     Ok(())
 }
+//get total time focus for a day
+pub fn get_total_day_time(
+    conn: &Connection,
+    user_id: &str,
+) -> rusqlite::Result<i32> {
+
+    let date =
+        chrono::Local::now()
+        .format("%Y-%m-%d")
+        .to_string();
+
+    let total: i32 = conn.query_row(
+        "
+        SELECT COALESCE(SUM(focus_time),0)
+        FROM attempts
+        WHERE user_id = ?1
+        AND date = ?2
+        ",
+        [user_id, &date],
+        |row| row.get(0),
+    )?;
+
+    Ok(total)
+}
 
 // get warning flag for the logged in user
 pub fn get_warning(
