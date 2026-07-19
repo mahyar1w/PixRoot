@@ -32,7 +32,7 @@ class AppState extends ChangeNotifier {
   }
 
   void updateTotalDayTime(int time) {
-    totalDayTime += time;
+    totalDayTime = time;
     notifyListeners();
   }
 

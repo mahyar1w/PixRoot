@@ -16,7 +16,7 @@ class LoginController {
     if (response.payload['status'] == 'ok') {
       return (true, response.payload['username'] as String);
     } else {
-      return (false, '');
+      return (false, response.payload['error'] as String);
     }
   }
 }
