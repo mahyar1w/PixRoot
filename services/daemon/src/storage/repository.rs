@@ -237,7 +237,7 @@ pub fn register_attempt(
 
     add_attempt(conn,user_id,status,&week_date,&date,time,)?;
     update_daily_status(conn,user_id,status,&date,&week_date,time,)?;
-    println!("session saved successfully");
+    println!("session saved success");
      Ok(())
 }
 
@@ -281,18 +281,19 @@ pub fn get_total_day_time(
     conn: &Connection,
     user_id: &str,
 ) -> Result<i32> {
-    println!("geting total time from database");
-    let date =
-        chrono::Local::now()
+    println!("getting total time from daily_status");
+
+    let date = chrono::Local::now()
         .format("%Y-%m-%d")
         .to_string();
 
     let total: i32 = conn.query_row(
         "
-        SELECT COALESCE(SUM(focus_time),0)
-        FROM attempts
+        SELECT COALESCE(totaltime, 0)
+        FROM daily_status
         WHERE user_id = ?1
         AND date = ?2
+        LIMIT 1
         ",
         [user_id, &date],
         |row| row.get(0),

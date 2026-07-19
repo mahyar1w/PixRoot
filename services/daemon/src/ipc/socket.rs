@@ -379,8 +379,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                         }
 
                         Err(e) => {
-                            println!("kir");
-
+                            
                             send(
                                 stream,
                                 crate::ipc::struct_ser_to_cl::TotalDayTime {
