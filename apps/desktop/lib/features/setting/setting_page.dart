@@ -212,13 +212,17 @@ class _SelectedAppsState extends State<SelectedApps> {
             ),
           ),
 
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context, widget.selected_apps);
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: const Text("Done"),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SizedBox(
+              height: 10,
+              width: 10,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context, widget.selected_apps);
+                },
+                child: const Text("Done"),
+              ),
             ),
           ),
         ],
