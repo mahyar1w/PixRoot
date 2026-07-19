@@ -216,7 +216,10 @@ class _SelectedAppsState extends State<SelectedApps> {
             onPressed: () {
               Navigator.pop(context, widget.selected_apps);
             },
-            child: const Text("Done"),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: const Text("Done"),
+            ),
           ),
         ],
       ),

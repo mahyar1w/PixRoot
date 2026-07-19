@@ -5,8 +5,31 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class SignInPage extends StatelessWidget {
+enum LogInPageState { good, bad }
+
+class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
+
+  @override
+  State<SignInPage> createState() => _SignInPageState();
+}
+
+class _SignInPageState extends State<SignInPage> {
+  LogInPageState state = LogInPageState.good;
+
+  void showWrongPasswordWarning() {
+    setState(() {
+      state = LogInPageState.bad;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
+      setState(() {
+        state = LogInPageState.good;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,12 +81,19 @@ class SignInPage extends StatelessWidget {
                     context.read<AppState>().setUsername(logInOkay.$2);
                     context.go("/home");
                   } else {
+                    showWrongPasswordWarning();
                     print(logInOkay.$2);
                   }
                 },
                 child: Text("Log In"),
               ),
             ),
+            SizedBox(height: 10),
+            if (state == LogInPageState.bad)
+              Text(
+                "Wrong password! Try again.",
+                style: TextStyle(fontSize: 24.27),
+              ),
           ],
         ),
       ),
