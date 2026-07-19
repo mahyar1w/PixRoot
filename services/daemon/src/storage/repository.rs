@@ -280,7 +280,7 @@ pub fn set_warning(
 pub fn get_total_day_time(
     conn: &Connection,
     user_id: &str,
-) -> rusqlite::Result<i32> {
+) -> Result<i32> {
     println!("geting total time from database");
     let date =
         chrono::Local::now()
