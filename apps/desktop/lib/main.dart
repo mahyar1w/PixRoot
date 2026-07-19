@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:desktop/app/app.dart';
 import 'package:desktop/core/assets/aseprite_assets.dart';
 import 'package:desktop/services/socket/pixroot_sockets.dart';

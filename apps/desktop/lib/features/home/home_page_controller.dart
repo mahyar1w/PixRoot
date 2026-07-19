@@ -64,21 +64,19 @@ class HomePageController {
         } else {}
         break;
       case 'interrupt':
-        switch (event.payload['warning']) {
+        switch (appState.warning) {
           case true:
             if (event.payload['stage'] == 'interrupted') {
               appState.changeNotif();
             } else if (event.payload['stage'] == 'warning_failed') {
-              endSession();
-              saveSession(false, 0);
+              appState.changeFailing();
             } else {
               appState.changeNotif();
             }
 
             break;
           case false:
-            endSession();
-            saveSession(false, 0);
+            appState.changeFailing();
 
             break;
         }

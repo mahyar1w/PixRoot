@@ -20,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final manager;
   late final homePageController;
+  late AppState appState;
   double minuteCounter = 0;
   int fullTime = 0;
   HomePageState state = HomePageState.idle;
@@ -33,16 +34,26 @@ class _HomePageState extends State<HomePage> {
     super.didChangeDependencies();
 
     manager = context.read<SocketManager>();
+    appState = context.read<AppState>();
     homePageController = HomePageController(
       manager: manager,
-      appState: context.read<AppState>(),
+      appState: appState,
     );
+
+    appState.addListener(_appStateListener);
   }
 
   @override
   void initState() {
     super.initState();
     _loadAnalyz();
+  }
+
+  void _appStateListener() {
+    if (context.watch<AppState>().failing) {
+      _endInFail();
+      appState.changeFailing();
+    }
   }
 
   Future<void> _loadAnalyz() async {
@@ -97,6 +108,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _endInFail() async {
+    final endOkay = await homePageController.endSession();
+    if (endOkay.$1 == true) {
+      cancelTimer();
+      secondCounter = 0;
+      minuteCounter = 0;
+      setState(() {
+        state = HomePageState.idle;
+      });
+
+      showDialog(context: context, builder: (_) => FailedSession());
+      final saveOkay = await homePageController.saveSession(false, 0);
+      if (saveOkay.$1 == true) {
+      } else {
+        print(saveOkay.$2);
+      }
+    } else {
+      print(endOkay.$2);
+    }
+  }
+
   void cancelTimer() {
     timer?.cancel();
     timer = null;
@@ -107,10 +139,25 @@ class _HomePageState extends State<HomePage> {
     timer?.cancel();
     super.dispose();
     homePageController.dispose();
+    appState.removeListener(_appStateListener);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (context.watch<AppState>().showNotif) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("You're not focued :("),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height - 100,
+            left: 20,
+            right: 20,
+          ),
+        ),
+      );
+    }
+
     String username = context.read<AppState>().username ?? "User";
     return Scaffold(
       appBar: AppBar(
@@ -198,31 +245,8 @@ class _HomePageState extends State<HomePage> {
             SizedBox(
               width: 250,
               child: ElevatedButton(
-                onPressed: () async {
-                  final endOkay = await homePageController.endSession();
-                  if (endOkay.$1 == true) {
-                    cancelTimer();
-                    secondCounter = 0;
-                    minuteCounter = 0;
-                    setState(() {
-                      state = HomePageState.idle;
-                    });
-
-                    showDialog(
-                      context: context,
-                      builder: (_) => FailedSession(),
-                    );
-                    final saveOkay = await homePageController.saveSession(
-                      false,
-                      0,
-                    );
-                    if (saveOkay.$1 == true) {
-                    } else {
-                      print(saveOkay.$2);
-                    }
-                  } else {
-                    print(endOkay.$2);
-                  }
+                onPressed: () {
+                  _endInFail();
                 },
                 child: Text("Cancel", style: TextStyle(fontSize: 32.36)),
               ),
@@ -271,9 +295,13 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     children: [
                       Icon(Icons.timer, size: 30.742),
-                      Text(
-                        "$totalDayTime Minutes",
-                        style: TextStyle(fontSize: 24.27),
+                      Consumer<AppState>(
+                        builder: (context, value, child) {
+                          return Text(
+                            "${context.watch<AppState>().totalDayTime} Minutes",
+                            style: TextStyle(fontSize: 24.27),
+                          );
+                        },
                       ),
                     ],
                   ),

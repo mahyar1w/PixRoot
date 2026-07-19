@@ -7,6 +7,7 @@ class AppState extends ChangeNotifier {
   bool intrrupt = false;
   int totalDayTime = 0;
   List<dynamic> blockedApps = [];
+  bool failing = false;
 
   bool showNotif = false;
 
@@ -37,6 +38,11 @@ class AppState extends ChangeNotifier {
 
   void changeNotif() {
     showNotif = !showNotif;
+    notifyListeners();
+  }
+
+  void changeFailing() {
+    failing = !failing;
     notifyListeners();
   }
 }
