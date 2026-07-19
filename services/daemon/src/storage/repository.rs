@@ -231,13 +231,13 @@ pub fn register_attempt(
     status: bool,
     time: i32,
 ) -> rusqlite::Result<()> {
-
+    println!("start save session in database");
     let date =chrono::Local::now().format("%Y-%m-%d").to_string();
     let week_date =format!("{:?}",chrono::Local::now().weekday());
 
     add_attempt(conn,user_id,status,&week_date,&date,time,)?;
     update_daily_status(conn,user_id,status,&date,&week_date,time,)?;
-    
+    println!("session saved successfully");
      Ok(())
 }
 
@@ -281,7 +281,7 @@ pub fn get_total_day_time(
     conn: &Connection,
     user_id: &str,
 ) -> rusqlite::Result<i32> {
-
+    println!("geting total time from database");
     let date =
         chrono::Local::now()
         .format("%Y-%m-%d")

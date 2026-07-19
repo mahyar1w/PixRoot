@@ -360,7 +360,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                     ) {
 
                         Ok(total_time) => {
-
+                            println!("sending total day time");
                             send(
                                 stream,
                                 crate::ipc::struct_ser_to_cl::TotalDayTime {
@@ -372,6 +372,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                                     },
                                 },
                             );
+                            println!("event send successfully");
                         }
 
                         Err(e) => {
@@ -632,6 +633,9 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
 
 fn send<T: serde::Serialize>(stream: &mut UnixStream, value: T) {
     if let Ok(json) = serde_json::to_string(&value) {
-        let _ = stream.write_all(json.as_bytes());
+        let message = format!("{}\n", json);
+
+        let _ = stream.write_all(message.as_bytes());
+        let _ = stream.flush();
     }
 }
