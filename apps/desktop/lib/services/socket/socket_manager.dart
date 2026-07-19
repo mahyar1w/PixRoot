@@ -28,21 +28,24 @@ class SocketManager {
   }
 
   void _handleMessage(String message) {
-    final json = jsonDecode(message);
+    try {
+      final json = jsonDecode(message);
+      if (json.containsKey('event')) {
+        final event = Event.fromJson(json);
+        _eventController.add(event);
+        return;
+      } else if (json.containsKey('action')) {
+        final response = Response.fromJson(json);
 
-    if (json.containsKey('event')) {
-      final event = Event.fromJson(json);
-      _eventController.add(event);
-      return;
-    } else if (json.containsKey('action')) {
-      final response = Response.fromJson(json);
+        final completer = _pendingRequests[response.action];
 
-      final completer = _pendingRequests[response.action];
-
-      if (completer != null) {
-        completer.complete(response);
-        _pendingRequests.remove(response.action);
+        if (completer != null) {
+          completer.complete(response);
+          _pendingRequests.remove(response.action);
+        }
       }
+    } catch (e) {
+      print(e);
     }
   }
 }

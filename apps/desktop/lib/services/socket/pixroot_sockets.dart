@@ -18,7 +18,7 @@ class PixrootSockets {
       throw StateError("Socket is not connected.");
     }
     if (_socket != null) {
-      _socket!.write("${jsonEncode(message.toJson())}\n");
+      _socket!.writeln(jsonEncode(message.toJson()));
     }
   }
 
@@ -31,9 +31,10 @@ class PixrootSockets {
       throw StateError("Socket is not connected.");
     }
 
-    _socket!.listen((data) {
-      final message = String.fromCharCodes(data);
-      onData(message);
-    });
+    _socket!
+        .cast<List<int>>()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(onData);
   }
 }

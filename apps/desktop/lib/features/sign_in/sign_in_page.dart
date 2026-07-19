@@ -2,11 +2,11 @@ import 'package:desktop/features/sign_in/sign_in_controller.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
 import 'package:desktop/state/app_state.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class SignInPage extends StatelessWidget {
   const SignInPage({super.key});
-  
 
   @override
   Widget build(BuildContext context) {
@@ -50,13 +50,16 @@ class SignInPage extends StatelessWidget {
               width: 300,
               child: ElevatedButton(
                 onPressed: () async {
-                  final (logInOkay, username) = await loginController.logIn(
+                  final logInOkay = await loginController.logIn(
                     loginController.emailField.text,
                     loginController.passwordField.text,
                   );
-                  if (logInOkay == true) {
-                    context.watch<AppState>().setUsername(username);
-                  } else {}
+                  if (logInOkay.$1 == true) {
+                    context.read<AppState>().setUsername(logInOkay.$2);
+                    context.go("/home");
+                  } else {
+                    print(logInOkay.$2);
+                  }
                 },
                 child: Text("Log In"),
               ),

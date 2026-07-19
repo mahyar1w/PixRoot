@@ -60,7 +60,7 @@ class HomePageController {
     switch (event.event) {
       case 'total_day_time':
         if (event.payload['status'] == 'ok') {
-          appState.updateTotalDayTime(event.payload['total_fucos_time']);
+          appState.updateTotalDayTime(event.payload['total_focus']);
         } else {}
         break;
       case 'interrupt':

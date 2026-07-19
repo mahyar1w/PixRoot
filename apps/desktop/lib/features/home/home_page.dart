@@ -28,10 +28,14 @@ class _HomePageState extends State<HomePage> {
   int separator = 0;
   int totalDayTime = 0;
   Timer? timer;
+  bool _initialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    if (_initialized) return;
+    _initialized = true;
 
     manager = context.read<SocketManager>();
     appState = context.read<AppState>();
@@ -50,7 +54,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _appStateListener() {
-    if (context.watch<AppState>().failing) {
+    if (context.read<AppState>().showNotif) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("You're not focued :("),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height - 100,
+            left: 20,
+            right: 20,
+          ),
+        ),
+      );
+    }
+
+    if (appState.failing) {
       _endInFail();
       appState.changeFailing();
     }
@@ -137,27 +155,13 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     timer?.cancel();
-    super.dispose();
     homePageController.dispose();
     appState.removeListener(_appStateListener);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (context.watch<AppState>().showNotif) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("You're not focued :("),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height - 100,
-            left: 20,
-            right: 20,
-          ),
-        ),
-      );
-    }
-
     String username = context.read<AppState>().username ?? "User";
     return Scaffold(
       appBar: AppBar(
@@ -227,6 +231,9 @@ class _HomePageState extends State<HomePage> {
                   final startOkay = await homePageController.startSession();
 
                   if (startOkay.$1 == true) {
+                    if (minuteCounter == 0) {
+                      minuteCounter = 1;
+                    }
                     secondCounter = minuteCounter.toInt() * 60;
                     separator = secondCounter ~/ 10;
 
@@ -298,7 +305,7 @@ class _HomePageState extends State<HomePage> {
                       Consumer<AppState>(
                         builder: (context, value, child) {
                           return Text(
-                            "${context.watch<AppState>().totalDayTime} Minutes",
+                            "${value.totalDayTime} Minutes",
                             style: TextStyle(fontSize: 24.27),
                           );
                         },
