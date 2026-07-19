@@ -51,7 +51,7 @@ pub struct LoginPayload {
 
 #[derive(Serialize, Deserialize)]
 pub struct Login {
-    pub action: String,
+    pub event: String,
     pub payload: LoginPayload,
 }
 

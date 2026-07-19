@@ -364,7 +364,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                             send(
                                 stream,
                                 crate::ipc::struct_ser_to_cl::TotalDayTime {
-                                    action: "total_day_time".to_string(),
+                                    event: "total_day_time".to_string(),
                                     payload: crate::ipc::struct_ser_to_cl::TotalDayTimePayload {
                                         status: "ok".to_string(),
                                         total_focus: total_time,
@@ -379,9 +379,9 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                             send(
                                 stream,
                                 crate::ipc::struct_ser_to_cl::TotalDayTime {
-                                    action: "total_day_time".to_string(),
+                                    event: "total_day_time".to_string(),
                                     payload: crate::ipc::struct_ser_to_cl::TotalDayTimePayload {
-                                        status: "error".to_string(),
+                                        status: "bad".to_string(),
                                         total_focus: 0,
                                         error: e.to_string(),
                                     },
