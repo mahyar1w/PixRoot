@@ -353,11 +353,14 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                             },
                         },
                     );
+                    println!("before get_total_day_time");
 
-                    match repository::get_total_day_time(
+                    result=repository::get_total_day_time(
                         &conn,
                         &user.user_id,
-                    ) {
+                    )
+                    println!("after get_total_day_time");
+                    match result {
 
                         Ok(total_time) => {
                             println!("sending total day time");
