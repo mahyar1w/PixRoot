@@ -157,7 +157,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                     crate::ipc::struct_ser_to_cl::CheckEmail {
                         action: "check_email".to_string(),
                         payload: crate::ipc::struct_ser_to_cl::CheckEmailPayload {
-                            status: "exists".to_string(),
+                            status: "ok".to_string(),
                             error: "".to_string(),
                         },
                     },
@@ -167,7 +167,7 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
                     crate::ipc::struct_ser_to_cl::CheckEmail {
                         action: "check_email".to_string(),
                         payload: crate::ipc::struct_ser_to_cl::CheckEmailPayload {
-                            status: "not_found".to_string(),
+                            status: "bad".to_string(),
                             error: "".to_string(),
                         },
                     },
