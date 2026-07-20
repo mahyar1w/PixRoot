@@ -51,10 +51,11 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
     // Latest set of open apps, used to detect newly opened (blocked) apps.
     let mut last_open: BTreeSet<String> = Default::default();
 
-    // Number of distraction offenses observed on this connection. The first
-    // offense in warning mode is a grace (`warning_successed`); repeats fail
-    // the session (`warning_failed`).
-    let mut offenses: u32 = 0;
+    // Active warning grace period, if any. When a blocked app opens while
+    // warning mode is on, we emit `warning_successed` and start a 3s grace: the
+    // user must close the offending app(s) before it expires. Holds the set of
+    // offending app names and the instant the grace began.
+    let mut grace: Option<(std::collections::HashSet<String>, std::time::Instant)> = None;
 
     loop {
         // (1) Read any new inbound bytes (non-blocking via the read timeout).
@@ -66,7 +67,9 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
                 while let Some((msg, rest)) = try_parse_message(&inbound) {
                     println!("received: {}", msg);
                     match serde_json::from_str::<BaseRequest>(&msg) {
-                        Ok(request) => handle_action(&msg, &request.action, &mut stream),
+                        Ok(request) => {
+                            handle_action(&msg, &request.action, &mut stream, &mut grace)
+                        }
                         Err(e) => eprintln!("bad request: {}", e),
                     }
                     inbound = rest;
@@ -79,54 +82,76 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
         thread::sleep(Duration::from_millis(1200));
         let open: BTreeSet<String> = snapshot.lock().unwrap().iter().cloned().collect();
         let newly_opened: Vec<String> = open.difference(&last_open).cloned().collect();
-        last_open = open;
+        last_open = open.clone();
 
-        if newly_opened.is_empty() {
+        let warning = warning_for_logged_in_user().unwrap_or(false);
+        let blocked = blocked_apps_for_logged_in_user().unwrap_or_default();
+
+        // (3a) Resolve any active grace period first: either the user closed the
+        // offending app(s) in time (grace succeeds silently) or the 3s window
+        // elapsed with the app still open -> emit `interrupted` (event #4).
+        if let Some((offending, started)) = grace.clone() {
+            let still_open = offending.iter().any(|a| open.contains(a));
+            if !still_open {
+                println!("interrupt: grace cleared, offending app(s) closed in time");
+                grace = None;
+            } else if started.elapsed() >= Duration::from_secs(3) {
+                println!(
+                    "interrupt: grace expired, still open={:?} -> stage=interrupted",
+                    offending
+                );
+                emit_interrupt(&mut stream, true, "interrupted");
+                grace = None;
+            }
+            // While a grace is active we do not start another one.
             continue;
         }
 
-        if let Some(blocked) = blocked_apps_for_logged_in_user() {
-            if blocked.is_empty() {
-                continue;
-            }
-            let matched: Vec<&String> =
-                newly_opened.iter().filter(|b| blocked.contains(*b)).collect();
-            if matched.is_empty() {
-                continue;
-            }
+        if newly_opened.is_empty() || blocked.is_empty() {
+            continue;
+        }
 
-            offenses += 1;
+        let matched: Vec<String> = newly_opened
+            .iter()
+            .filter(|b| blocked.contains(*b))
+            .cloned()
+            .collect();
+        if matched.is_empty() {
+            continue;
+        }
 
-            let warning = warning_for_logged_in_user().unwrap_or(false);
-            let stage = if !warning {
-                "interrupted"
-            } else if offenses == 1 {
-                "warning_successed"
-            } else {
-                "warning_failed"
-            };
-
+        if !warning {
+            // Warning mode off: any blocked app opening is an immediate
+            // interruption (event #1).
             println!(
-                "interrupt: blocked app matched={:?} warning={} offenses={} -> stage={}",
-                matched, warning, offenses, stage
+                "interrupt: blocked app matched={:?} warning=false -> stage=interrupted",
+                matched
             );
-
-            let event = Interrupt {
-                event: "interrupt".to_string(),
-                payload: crate::ipc::struct_ser_to_cl::InterruptPayload {
-                    warning,
-                    stage: stage.to_string(),
-                },
-            };
-            if let Ok(json) = serde_json::to_string(&event) {
-                println!("interrupt: emitting event {}", json);
-                if stream.write_all(json.as_bytes()).is_err() {
-                    eprintln!("interrupt: failed to write event to stream");
-                    break;
-                }
-            }
+            emit_interrupt(&mut stream, false, "interrupted");
+        } else {
+            // Warning mode on: give the user a 3s grace to close the app
+            // (event #3), then start the grace timer.
+            println!(
+                "interrupt: blocked app matched={:?} warning=true -> stage=warning_successed (grace started)",
+                matched
+            );
+            emit_interrupt(&mut stream, true, "warning_successed");
+            grace = Some((matched.into_iter().collect(), std::time::Instant::now()));
         }
     }
+}
+
+/// Serialize and send a newline-terminated `interrupt` event to the client.
+fn emit_interrupt(stream: &mut UnixStream, warning: bool, stage: &str) {
+    let event = Interrupt {
+        event: "interrupt".to_string(),
+        payload: crate::ipc::struct_ser_to_cl::InterruptPayload {
+            warning,
+            stage: stage.to_string(),
+        },
+    };
+    println!("interrupt: emitting event warning={} stage={}", warning, stage);
+    send(stream, &event);
 }
 
 /// Try to parse one complete JSON message from the front of `buf`.
@@ -161,7 +186,12 @@ fn warning_for_logged_in_user() -> Option<bool> {
     repository::get_warning(&conn).ok()
 }
 
-fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
+fn handle_action(
+    buffer: &str,
+    action: &str,
+    stream: &mut UnixStream,
+    grace: &mut Option<(std::collections::HashSet<String>, std::time::Instant)>,
+) {
     match action {
         "check_email" => {
             let req: crate::ipc::struct_cl_to_ser::CheckEmail =
@@ -456,6 +486,8 @@ fn handle_action(buffer: &str, action: &str, stream: &mut UnixStream) {
 }
 
         "start_session" => {
+            // Fresh session: clear any lingering grace state from a prior one.
+            *grace = None;
             send(
                 stream,
                 crate::ipc::struct_ser_to_cl::StartSession {
