@@ -107,20 +107,24 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot, active: Arc
         let warning = warning_for_logged_in_user().unwrap_or(false);
         let blocked = blocked_apps_for_logged_in_user().unwrap_or_default();
 
-        // (3a) Resolve any active grace period first: either the user closed the
-        // offending app(s) in time (grace succeeds silently) or the 3s window
-        // elapsed with the app still open -> emit `interrupted` (event #4).
+        // (3a) Resolve any active grace period first. We only decide at the 3s
+        // deadline: if the offending app is still open -> `warning_failed`,
+        // otherwise (closed in time) -> `warning_successed`.
         if let Some((offending, started)) = grace.clone() {
-            let still_open = offending.iter().any(|a| open.contains(a));
-            if !still_open {
-                println!("interrupt: grace cleared, offending app(s) closed in time");
-                grace = None;
-            } else if started.elapsed() >= Duration::from_secs(3) {
-                println!(
-                    "interrupt: grace expired, still open={:?} -> stage=interrupted",
-                    offending
-                );
-                emit_interrupt(&mut stream, true, "interrupted");
+            if started.elapsed() >= Duration::from_secs(3) {
+                let still_open = offending.iter().any(|a| open.contains(a));
+                if still_open {
+                    println!(
+                        "interrupt: grace expired, still open={:?} -> stage=warning_failed",
+                        offending
+                    );
+                    emit_interrupt(&mut stream, true, "warning_failed");
+                } else {
+                    println!(
+                        "interrupt: grace expired, offending app(s) closed -> stage=warning_successed"
+                    );
+                    emit_interrupt(&mut stream, true, "warning_successed");
+                }
                 grace = None;
             }
             // While a grace is active we do not start another one.
@@ -149,13 +153,14 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot, active: Arc
             );
             emit_interrupt(&mut stream, false, "interrupted");
         } else {
-            // Warning mode on: give the user a 3s grace to close the app
-            // (event #3), then start the grace timer.
+            // Warning mode on: emit the initial warning (`interrupted`) at t=0
+            // and start a 3s grace. The outcome (success/fail) is decided when
+            // the grace deadline elapses (see 3a).
             println!(
-                "interrupt: blocked app matched={:?} warning=true -> stage=warning_successed (grace started)",
+                "interrupt: blocked app matched={:?} warning=true -> stage=interrupted (grace started)",
                 matched
             );
-            emit_interrupt(&mut stream, true, "warning_successed");
+            emit_interrupt(&mut stream, true, "interrupted");
             grace = Some((matched.into_iter().collect(), std::time::Instant::now()));
         }
     }
