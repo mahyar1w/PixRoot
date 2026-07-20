@@ -1,7 +1,8 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -20,7 +21,7 @@ const SOCKET_PATH: &str = "/tmp/focus_app.sock";
 /// `snapshot` is the shared, periodically updated list of currently open apps.
 /// Each client connection keeps the socket open after the request and streams
 /// `interrupt` events whenever a newly opened app matches the blocked list.
-pub fn start_socket_server(snapshot: OpenAppsSnapshot) {
+pub fn start_socket_server(snapshot: OpenAppsSnapshot, active: Arc<AtomicBool>) {
     let _ = fs::remove_file(SOCKET_PATH);
     let listener = UnixListener::bind(SOCKET_PATH).expect("bind socket");
     println!("socket started");
@@ -29,14 +30,15 @@ pub fn start_socket_server(snapshot: OpenAppsSnapshot) {
         match stream {
             Ok(stream) => {
                 let snapshot = Arc::clone(&snapshot);
-                thread::spawn(move || handle_client(stream, snapshot));
+                let active = Arc::clone(&active);
+                thread::spawn(move || handle_client(stream, snapshot, active));
             }
             Err(e) => eprintln!("accept error: {}", e),
         }
     }
 }
 
-fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
+fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot, active: Arc<AtomicBool>) {
     // Non-blocking reads: each connection may send multiple JSON messages over
     // its lifetime, so we poll for new inbound bytes and parse complete messages
     // as they arrive (see `try_parse_message`).
@@ -57,6 +59,10 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
     // offending app names and the instant the grace began.
     let mut grace: Option<(std::collections::HashSet<String>, std::time::Instant)> = None;
 
+    // Cached installed-apps map (exec-bin -> display name), rebuilt on
+    // `start_session`. Used to bridge process names and blocked display names.
+    let mut installed: HashMap<String, String> = HashMap::new();
+
     loop {
         // (1) Read any new inbound bytes (non-blocking via the read timeout).
         match stream.read(&mut chunk) {
@@ -67,9 +73,14 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
                 while let Some((msg, rest)) = try_parse_message(&inbound) {
                     println!("received: {}", msg);
                     match serde_json::from_str::<BaseRequest>(&msg) {
-                        Ok(request) => {
-                            handle_action(&msg, &request.action, &mut stream, &mut grace)
-                        }
+                        Ok(request) => handle_action(
+                            &msg,
+                            &request.action,
+                            &mut stream,
+                            &mut grace,
+                            &active,
+                            &mut installed,
+                        ),
                         Err(e) => eprintln!("bad request: {}", e),
                     }
                     inbound = rest;
@@ -80,6 +91,15 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
 
         // (3) Stream `interrupt` events for newly blocked apps.
         thread::sleep(Duration::from_millis(1200));
+
+        // Only run interrupt detection while a session is active. When inactive,
+        // reset per-session state so the next session starts clean.
+        if !active.load(Ordering::Relaxed) {
+            grace = None;
+            last_open.clear();
+            continue;
+        }
+
         let open: BTreeSet<String> = snapshot.lock().unwrap().iter().cloned().collect();
         let newly_opened: Vec<String> = open.difference(&last_open).cloned().collect();
         last_open = open.clone();
@@ -113,7 +133,7 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
 
         let matched: Vec<String> = newly_opened
             .iter()
-            .filter(|b| blocked.contains(*b))
+            .filter(|b| apps::matches_blocked(b, &blocked, &installed))
             .cloned()
             .collect();
         if matched.is_empty() {
@@ -172,13 +192,20 @@ fn try_parse_message(buf: &[u8]) -> Option<(String, Vec<u8>)> {
     Some((s.to_string(), rest))
 }
 
+/// Returns the blocked-app names for the logged-in user, normalized for tolerant
+/// matching (see `apps::normalize`). Empty/blank entries are dropped.
 fn blocked_apps_for_logged_in_user() -> Option<std::collections::HashSet<String>> {
     let conn = Connection::open(db_path()).ok()?;
     let raw = repository::get_blocked_apps(&conn).ok()?;
     if raw.trim().is_empty() {
         return Some(Default::default());
     }
-    Some(raw.split(',').map(|s| s.trim().to_string()).collect())
+    Some(
+        raw.split(',')
+            .map(|s| apps::normalize(s))
+            .filter(|s| !s.is_empty())
+            .collect(),
+    )
 }
 
 fn warning_for_logged_in_user() -> Option<bool> {
@@ -191,6 +218,8 @@ fn handle_action(
     action: &str,
     stream: &mut UnixStream,
     grace: &mut Option<(std::collections::HashSet<String>, std::time::Instant)>,
+    active: &Arc<AtomicBool>,
+    installed: &mut HashMap<String, String>,
 ) {
     match action {
         "check_email" => {
@@ -486,8 +515,11 @@ fn handle_action(
 }
 
         "start_session" => {
-            // Fresh session: clear any lingering grace state from a prior one.
+            // Fresh session: clear any lingering grace state from a prior one,
+            // start the app scanner, and refresh the installed-apps cache.
             *grace = None;
+            *installed = apps::installed_apps();
+            active.store(true, Ordering::Relaxed);
             send(
                 stream,
                 crate::ipc::struct_ser_to_cl::StartSession {
@@ -501,6 +533,9 @@ fn handle_action(
         }
 
         "end_session" => {
+            // Session over: stop the app scanner and clear grace state.
+            active.store(false, Ordering::Relaxed);
+            *grace = None;
             send(
                 stream,
                 crate::ipc::struct_ser_to_cl::EndSession {

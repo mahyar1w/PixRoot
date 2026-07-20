@@ -82,6 +82,10 @@ pub fn open_apps() -> BTreeSet<String> {
             let cmdline = fs::read(path.join("cmdline")).unwrap_or_default();
             if let Some(first_part) = cmdline.split(|&b| b == 0).next() {
                 let full_path = String::from_utf8_lossy(first_part);
+                // Ignore Wine / Windows apps (paths like `C:\...\foo.exe`).
+                if is_wine_app(&full_path) {
+                    continue;
+                }
                 if let Some(bin_name) =
                     Path::new(&*full_path).file_name().and_then(|s| s.to_str())
                 {
@@ -100,4 +104,72 @@ pub fn open_apps() -> BTreeSet<String> {
         }
     }
     open_bins
+}
+
+/// True for Wine / Windows executables, whose cmdline is a Windows-style path
+/// such as `C:\windows\system32\svchost.exe`. These are ignored by matching.
+pub fn is_wine_app(raw_cmd: &str) -> bool {
+    if raw_cmd.contains('\\') {
+        return true;
+    }
+    // Windows drive prefix like `C:\` or `C:/`.
+    let bytes = raw_cmd.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/')
+}
+
+/// Normalize an app name for tolerant matching between installed-app display
+/// names (e.g. "Disk Usage Analyzer"), desktop exec binaries (e.g. "baobab"),
+/// and running process names (e.g. "ardour9", version-suffixed AppImages).
+///
+/// Lowercases, strips known suffixes and version/hash tails, and removes all
+/// non-alphanumeric characters (dashes, underscores, spaces, dots).
+pub fn normalize(s: &str) -> String {
+    let mut s = s.trim().to_lowercase();
+
+    // Strip known file-type suffixes.
+    for suffix in [".desktop", ".appimage", ".exe"] {
+        if s.ends_with(suffix) {
+            s.truncate(s.len() - suffix.len());
+        }
+    }
+
+    // Drop a trailing version/hash tail introduced by a separator, e.g.
+    // "deltachat-2.43.0-x86_64_0858..." -> "deltachat",
+    // "capacities-1.63.3_3ec7..." -> "capacities".
+    if let Some(idx) = s.find(|c| c == '-' || c == '_') {
+        let tail = &s[idx + 1..];
+        let tail_has_digit = tail.chars().any(|c| c.is_ascii_digit());
+        if tail_has_digit {
+            s.truncate(idx);
+        }
+    }
+
+    // Remove everything that is not alphanumeric.
+    s.chars().filter(|c| c.is_ascii_alphanumeric()).collect()
+}
+
+/// Decide whether a running process binary matches any blocked app.
+///
+/// `blocked_norm` holds already-normalized blocked names (from the stored CSV,
+/// which uses installed-app display names). `installed` maps exec-bin -> display
+/// name so we can bridge the process-name / display-name namespaces.
+pub fn matches_blocked(
+    open_bin: &str,
+    blocked_norm: &std::collections::HashSet<String>,
+    installed: &HashMap<String, String>,
+) -> bool {
+    let bin_norm = normalize(open_bin);
+    if !bin_norm.is_empty() && blocked_norm.contains(&bin_norm) {
+        return true;
+    }
+    if let Some(display_name) = installed.get(open_bin) {
+        let name_norm = normalize(display_name);
+        if !name_norm.is_empty() && blocked_norm.contains(&name_norm) {
+            return true;
+        }
+    }
+    false
 }
