@@ -14,13 +14,27 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   bool _hidePassword = true;
-  
+  late final SignUpController signUpController;
+  late final manager;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_initialized) {
+      manager = context.read<SocketManager>();
+      signUpController = SignUpController(manager: manager);
+      _initialized = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final manager = context.read<SocketManager>();
-
-    final signUpController = SignUpController(manager: manager);
     return Scaffold(
+      appBar: AppBar(
+        title: Center(child: Text("SignUp", style: TextStyle(fontSize: 32.36))),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -79,8 +93,14 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
             SizedBox(height: 10),
             SizedBox(
+              height: 45,
               width: 300,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
                 onPressed: () async {
                   final signUpOkay = await signUpController.signUp(
                     signUpController.usernameField.text,
@@ -97,7 +117,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     print('signup failed: ${signUpOkay.$2}');
                   }
                 },
-                child: Text("Sign Up"),
+                child: Text("Sign Up", style: TextStyle(fontSize: 16.18)),
               ),
             ),
           ],

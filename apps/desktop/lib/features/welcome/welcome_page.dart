@@ -35,7 +35,7 @@ class WelcomePage extends StatelessWidget {
                   controller: emailController,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.email),
-                    labelText: "Enter your gmail",
+                    labelText: "Email",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -46,6 +46,11 @@ class WelcomePage extends StatelessWidget {
                   width: 300,
                   height: 45,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
                     onPressed: () async {
                       final hasAccount = await welcomeController.checkEmail(
                         emailController.text,
@@ -57,7 +62,7 @@ class WelcomePage extends StatelessWidget {
                         context.push("/register");
                       }
                     },
-                    child: Text("Start"),
+                    child: Text("Start", style: TextStyle(fontSize: 16.18),),
                   ),
                 ),
               ],

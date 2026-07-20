@@ -17,6 +17,20 @@ class SignInPage extends StatefulWidget {
 class _SignInPageState extends State<SignInPage> {
   LogInPageState state = LogInPageState.good;
   bool _hidePassword = true;
+  late final manager;
+  late final LoginController loginController;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_initialized) {
+      manager = context.read<SocketManager>();
+      loginController = LoginController(manager: manager);
+      _initialized = true;
+    }
+  }
 
   void showWrongPasswordWarning() {
     setState(() {
@@ -34,10 +48,10 @@ class _SignInPageState extends State<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
-    final manager = context.read<SocketManager>();
-
-    final loginController = LoginController(manager: manager);
     return Scaffold(
+      appBar: AppBar(
+        title: Center(child: Text("LogIn", style: TextStyle(fontSize: 32.36))),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -82,8 +96,14 @@ class _SignInPageState extends State<SignInPage> {
             ),
             SizedBox(height: 10),
             SizedBox(
+              height: 45,
               width: 300,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
                 onPressed: () async {
                   final logInOkay = await loginController.logIn(
                     loginController.emailField.text,
@@ -97,15 +117,19 @@ class _SignInPageState extends State<SignInPage> {
                     print(logInOkay.$2);
                   }
                 },
-                child: Text("Log In"),
+                child: Text("Log In", style: TextStyle(fontSize: 16.18),),
               ),
             ),
             SizedBox(height: 10),
             if (state == LogInPageState.bad)
-              Text(
-                "Wrong password! Try again.",
-                style: TextStyle(fontSize: 24.27),
+              SizedBox(
+                height: 50,
+                child: Text(
+                  "Wrong password! Try again.",
+                  style: TextStyle(fontSize: 24.27),
+                ),
               ),
+            if (state == LogInPageState.good) SizedBox(height: 50, width: 300),
           ],
         ),
       ),
