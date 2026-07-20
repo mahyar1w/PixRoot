@@ -16,6 +16,7 @@ class SignInPage extends StatefulWidget {
 
 class _SignInPageState extends State<SignInPage> {
   LogInPageState state = LogInPageState.good;
+  bool _hidePassword = true;
 
   void showWrongPasswordWarning() {
     setState(() {
@@ -47,7 +48,7 @@ class _SignInPageState extends State<SignInPage> {
                 controller: loginController.emailField,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.email),
-                  labelText: "Enter your gmail",
+                  labelText: "Email",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -59,9 +60,20 @@ class _SignInPageState extends State<SignInPage> {
               width: 300,
               child: TextField(
                 controller: loginController.passwordField,
+                obscureText: _hidePassword,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.lock),
-                  labelText: "Enter your password",
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _hidePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _hidePassword = !_hidePassword;
+                      });
+                    },
+                  ),
+                  labelText: "Password",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
