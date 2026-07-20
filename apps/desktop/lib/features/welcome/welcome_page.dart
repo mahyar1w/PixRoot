@@ -1,5 +1,6 @@
 import 'package:desktop/features/welcome/welcome_controller.dart';
 import 'package:desktop/services/socket/socket_manager.dart';
+import 'package:desktop/state/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +48,7 @@ class WelcomePage extends StatelessWidget {
                   height: 45,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueGrey,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -55,6 +57,7 @@ class WelcomePage extends StatelessWidget {
                       final hasAccount = await welcomeController.checkEmail(
                         emailController.text,
                       );
+                      context.read<AppState>().addEmail(emailController.text);
                       if (hasAccount.$1 == true) {
                         context.push("/login");
                       } else {
@@ -62,7 +65,10 @@ class WelcomePage extends StatelessWidget {
                         context.push("/register");
                       }
                     },
-                    child: Text("Start", style: TextStyle(fontSize: 16.18),),
+                    child: Text(
+                      "Start",
+                      style: TextStyle(fontSize: 16.18, color: Colors.black),
+                    ),
                   ),
                 ),
               ],

@@ -8,6 +8,7 @@ class AppState extends ChangeNotifier {
   int totalDayTime = 0;
   List<dynamic> blockedApps = [];
   bool failing = false;
+  String email = '';
 
   bool showNotif = false;
 
@@ -44,5 +45,9 @@ class AppState extends ChangeNotifier {
   void changeFailing() {
     failing = !failing;
     notifyListeners();
+  }
+
+  void addEmail(String theEmail) {
+    email = theEmail;
   }
 }

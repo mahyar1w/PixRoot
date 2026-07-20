@@ -69,6 +69,11 @@ flutter:
     - assets/animations/
     - assets/sprites/
 
+  fonts:
+    - family: MyPixelFont
+      fonts:
+        - asset: assets/fonts/LowresPixel-Regular.otf
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

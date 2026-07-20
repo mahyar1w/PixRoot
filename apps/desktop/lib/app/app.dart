@@ -12,6 +12,7 @@ class PixRootApp extends StatelessWidget {
       routerConfig: router,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
+        fontFamily: "MyPixelFont"
       ),
     );
   }

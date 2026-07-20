@@ -28,6 +28,8 @@ class _SignInPageState extends State<SignInPage> {
     if (!_initialized) {
       manager = context.read<SocketManager>();
       loginController = LoginController(manager: manager);
+
+      loginController.emailField.text = context.read<AppState>().email;
       _initialized = true;
     }
   }
@@ -47,6 +49,14 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   @override
+  void dispose() {
+    loginController.emailField.dispose();
+    loginController.passwordField.dispose();
+
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -59,6 +69,7 @@ class _SignInPageState extends State<SignInPage> {
             SizedBox(
               width: 300,
               child: TextField(
+                readOnly: true,
                 controller: loginController.emailField,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.email),
@@ -100,6 +111,7 @@ class _SignInPageState extends State<SignInPage> {
               width: 300,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -117,7 +129,10 @@ class _SignInPageState extends State<SignInPage> {
                     print(logInOkay.$2);
                   }
                 },
-                child: Text("Log In", style: TextStyle(fontSize: 16.18),),
+                child: Text(
+                  "Log In",
+                  style: TextStyle(fontSize: 16.18, color: Colors.black),
+                ),
               ),
             ),
             SizedBox(height: 10),

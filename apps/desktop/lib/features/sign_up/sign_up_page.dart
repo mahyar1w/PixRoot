@@ -25,8 +25,18 @@ class _SignUpPageState extends State<SignUpPage> {
     if (!_initialized) {
       manager = context.read<SocketManager>();
       signUpController = SignUpController(manager: manager);
+
+      signUpController.emailField.text = context.read<AppState>().email;
       _initialized = true;
     }
+  }
+
+  @override
+  void dispose() {
+    signUpController.emailField.dispose();
+    signUpController.passwordField.dispose();
+    signUpController.usernameField.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,6 +66,7 @@ class _SignUpPageState extends State<SignUpPage> {
             SizedBox(
               width: 300,
               child: TextField(
+                readOnly: true,
                 controller: signUpController.emailField,
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.email),
@@ -97,6 +108,7 @@ class _SignUpPageState extends State<SignUpPage> {
               width: 300,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -117,7 +129,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     print('signup failed: ${signUpOkay.$2}');
                   }
                 },
-                child: Text("Sign Up", style: TextStyle(fontSize: 16.18)),
+                child: Text(
+                  "Sign Up",
+                  style: TextStyle(fontSize: 16.18, color: Colors.black),
+                ),
               ),
             ),
           ],

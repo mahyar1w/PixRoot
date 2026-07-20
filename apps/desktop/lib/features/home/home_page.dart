@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 
 enum HomePageState { idle, running, finished }
 
+enum CounterState { second, minute }
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -24,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   double minuteCounter = 0;
   int fullTime = 0;
   HomePageState state = HomePageState.idle;
+  CounterState counterState = CounterState.minute;
   int secondCounter = 0;
   int separator = 0;
   int totalDayTime = 0;
@@ -57,12 +60,23 @@ class _HomePageState extends State<HomePage> {
     if (context.read<AppState>().showNotif) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("You're not focued :("),
+          padding: EdgeInsets.all(20),
+          duration: Duration(seconds: 3),
+          backgroundColor: Colors.grey,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Center(
+            child: Text(
+              "You're not focued :(",
+              style: TextStyle(fontSize: 16.18),
+            ),
+          ),
           behavior: SnackBarBehavior.floating,
           margin: EdgeInsets.only(
             bottom: MediaQuery.of(context).size.height - 100,
-            left: 20,
-            right: 20,
+            left: 200,
+            right: 200,
           ),
         ),
       );
@@ -91,10 +105,14 @@ class _HomePageState extends State<HomePage> {
 
     timer = Timer.periodic(Duration(seconds: 1), (t) {
       if (secondCounter <= 0) {
+        counterState = CounterState.minute;
         t.cancel();
         timer = null;
         _endIt();
         return;
+      }
+      if (secondCounter <= 60) {
+        counterState = CounterState.second;
       }
 
       setState(() {
@@ -177,7 +195,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(color: Colors.grey),
+              decoration: BoxDecoration(color: Colors.blueGrey),
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: Text("Hello, $username", style: TextStyle(fontSize: 24)),
@@ -197,7 +215,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            Divider(),
+            Divider(color: Colors.blueGrey,),
             ListTile(
               title: Row(
                 children: [
@@ -222,18 +240,21 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(height: 40),
           if (state == HomePageState.idle)
             SizedBox(
               width: 250,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey,
+                ),
                 onPressed: () async {
+                  if (minuteCounter == 0) {
+                    return;
+                  }
+
                   final startOkay = await homePageController.startSession();
 
                   if (startOkay.$1 == true) {
-                    if (minuteCounter == 0) {
-                      minuteCounter = 1;
-                    }
                     secondCounter = minuteCounter.toInt() * 60;
                     separator = secondCounter ~/ 10;
 
@@ -245,29 +266,44 @@ class _HomePageState extends State<HomePage> {
                     print(startOkay.$2);
                   }
                 },
-                child: Text("Start", style: TextStyle(fontSize: 32.36)),
+                child: Text(
+                  "Start",
+                  style: TextStyle(fontSize: 32.36, color: Colors.black),
+                ),
               ),
             ),
           if (state == HomePageState.running)
             SizedBox(
               width: 250,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey,
+                ),
                 onPressed: () {
                   _endInFail();
                 },
-                child: Text("Cancel", style: TextStyle(fontSize: 32.36)),
+                child: Text("Cancel", style: TextStyle(fontSize: 32.36, color: Colors.black)),
               ),
             ),
-          Text(
-            "${(minuteCounter.toInt() ~/ 60).toString().padLeft(2, "0")}:${(minuteCounter.toInt() % 60).toString().padLeft(2, "0")}",
-            style: TextStyle(
-              fontSize: state == HomePageState.idle ? 80.09 : 97.08,
+          if (counterState == CounterState.minute)
+            Text(
+              "${(minuteCounter.toInt() ~/ 60).toString().padLeft(2, "0")}:${(minuteCounter.toInt() % 60).toString().padLeft(2, "0")}",
+              style: TextStyle(
+                fontSize: state == HomePageState.idle ? 80.09 : 97.08,
+                color: Colors.black,
+              ),
             ),
-          ),
+          if (counterState == CounterState.second)
+            Text(
+              secondCounter.toInt().toString().padLeft(2, "0"),
+              style: TextStyle(
+                fontSize: state == HomePageState.idle ? 80.09 : 97.08,
+              ),
+            ),
           if (state == HomePageState.idle)
             SizedBox(
-              height: 256,
-              width: 256,
+              height: 384,
+              width: 384,
               child: Image.asset(
                 "assets/images/Kharab.png",
                 fit: BoxFit.fill,
@@ -279,19 +315,28 @@ class _HomePageState extends State<HomePage> {
           if (state == HomePageState.idle)
             SizedBox(
               width: 400,
-              child: Slider(
-                value: minuteCounter,
-                onChanged: (value) {
-                  setState(() {
-                    minuteCounter = value;
-                  });
-                },
-                min: 0,
-                max: 180,
-                divisions: 36,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 15,
+                  thumbShape: SliderComponentShape.noThumb,
+                  tickMarkShape: SliderTickMarkShape.noTickMark,
+                  overlayShape: SliderComponentShape.noOverlay,
+                  activeTrackColor: Colors.blue,
+                  inactiveTrackColor: Colors.grey,
+                ),
+                child: Slider(
+                  value: minuteCounter,
+                  onChanged: (value) {
+                    setState(() {
+                      minuteCounter = value;
+                    });
+                  },
+                  min: 0,
+                  max: 180,
+                  divisions: 36,
+                ),
               ),
             ),
-          SizedBox(height: 50),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

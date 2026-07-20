@@ -98,6 +98,9 @@ class _SettingPageState extends State<SettingPage> {
                           style: TextStyle(fontSize: 16.18),
                         ),
                         ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueGrey,
+                          ),
                           onPressed: () async {
                             final result = await showDialog(
                               context: context,
@@ -115,7 +118,10 @@ class _SettingPageState extends State<SettingPage> {
                               } else {}
                             }
                           },
-                          child: Text("Launch apps"),
+                          child: Text(
+                            "Launch apps",
+                            style: TextStyle(color: Colors.black),
+                          ),
                         ),
                       ],
                     ),
@@ -206,7 +212,7 @@ class _SelectedAppsState extends State<SelectedApps> {
                 hintText: "Search apps...",
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(20))
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
               ),
               onChanged: (value) {
@@ -216,7 +222,7 @@ class _SelectedAppsState extends State<SelectedApps> {
               },
             ),
           ),
-          const Text("Select apps", style: TextStyle(fontSize: 16.18),),
+          const Text("Select apps", style: TextStyle(fontSize: 16.18)),
 
           Expanded(
             child: ListView(
@@ -243,11 +249,15 @@ class _SelectedAppsState extends State<SelectedApps> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
+                  backgroundColor: Colors.blueGrey,
                 ),
                 onPressed: () {
                   Navigator.pop(context, widget.selected_apps);
                 },
-                child: const Text("Done", style: TextStyle(fontSize: 16.18)),
+                child: const Text(
+                  "Done",
+                  style: TextStyle(fontSize: 16.18, color: Colors.black),
+                ),
               ),
             ),
           ),
