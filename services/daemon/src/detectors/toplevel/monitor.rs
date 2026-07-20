@@ -12,7 +12,8 @@ pub type OpenAppsSnapshot = Arc<Mutex<Vec<String>>>;
 /// (and blocked) apps and emit `interrupt` events over IPC.
 pub fn start_monitor(interval: Duration, snapshot: OpenAppsSnapshot) {
     thread::spawn(move || loop {
-        let open = apps::open_apps().into_iter().collect();
+        let open: Vec<String> = apps::open_apps().into_iter().collect();
+        println!("open apps: {:?}", open);
         *snapshot.lock().unwrap() = open;
         thread::sleep(interval);
     });
