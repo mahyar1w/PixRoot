@@ -181,6 +181,9 @@ class SelectedApps extends StatefulWidget {
 }
 
 class _SelectedAppsState extends State<SelectedApps> {
+  TextEditingController searchController = TextEditingController();
+  String query = "";
+
   @override
   void initState() {
     super.initState();
@@ -188,15 +191,36 @@ class _SelectedAppsState extends State<SelectedApps> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredApps = widget.all_apps.where((app) {
+      return app.toLowerCase().contains(query);
+    }).toList();
     return Dialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("Select apps"),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: searchController,
+              decoration: const InputDecoration(
+                hintText: "Search apps...",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(20))
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  query = value.toLowerCase();
+                });
+              },
+            ),
+          ),
+          const Text("Select apps", style: TextStyle(fontSize: 16.18),),
 
           Expanded(
             child: ListView(
-              children: widget.all_apps.map((app) {
+              children: filteredApps.map((app) {
                 return CheckboxListTile(
                   title: Text(app),
                   value: widget.selected_apps.contains(app),
@@ -213,15 +237,17 @@ class _SelectedAppsState extends State<SelectedApps> {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16.0),
             child: SizedBox(
-              height: 10,
-              width: 10,
+              width: 100,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                ),
                 onPressed: () {
                   Navigator.pop(context, widget.selected_apps);
                 },
-                child: const Text("Done"),
+                child: const Text("Done", style: TextStyle(fontSize: 16.18)),
               ),
             ),
           ),
