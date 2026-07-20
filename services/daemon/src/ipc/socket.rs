@@ -51,6 +51,11 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
     // Latest set of open apps, used to detect newly opened (blocked) apps.
     let mut last_open: BTreeSet<String> = Default::default();
 
+    // Number of distraction offenses observed on this connection. The first
+    // offense in warning mode is a grace (`warning_successed`); repeats fail
+    // the session (`warning_failed`).
+    let mut offenses: u32 = 0;
+
     loop {
         // (1) Read any new inbound bytes (non-blocking via the read timeout).
         match stream.read(&mut chunk) {
@@ -90,12 +95,22 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
                 continue;
             }
 
+            offenses += 1;
+
             let warning = warning_for_logged_in_user().unwrap_or(false);
-            let stage = if warning {
-                "warning_failed"
-            } else {
+            let stage = if !warning {
                 "interrupted"
+            } else if offenses == 1 {
+                "warning_successed"
+            } else {
+                "warning_failed"
             };
+
+            println!(
+                "interrupt: blocked app matched={:?} warning={} offenses={} -> stage={}",
+                matched, warning, offenses, stage
+            );
+
             let event = Interrupt {
                 event: "interrupt".to_string(),
                 payload: crate::ipc::struct_ser_to_cl::InterruptPayload {
@@ -104,7 +119,9 @@ fn handle_client(mut stream: UnixStream, snapshot: OpenAppsSnapshot) {
                 },
             };
             if let Ok(json) = serde_json::to_string(&event) {
+                println!("interrupt: emitting event {}", json);
                 if stream.write_all(json.as_bytes()).is_err() {
+                    eprintln!("interrupt: failed to write event to stream");
                     break;
                 }
             }
