@@ -1,12 +1,14 @@
 use rusqlite::{Connection,Result};
 use std::path::PathBuf;
+use dirs;
 
-// Absolute path to the database, located next to the daemon binary.
+// Absolute path to the database in XDG data directory.
 pub fn db_path() -> PathBuf {
-    let mut p = std::env::current_exe().expect("failed to determine executable path");
-    p.pop();
-    p.push("data.db");
-    p
+    let data_dir = dirs::data_dir()
+        .expect("failed to determine data directory")
+        .join("pixroot");
+    std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
+    data_dir.join("data.db")
 }
 
 //function of create tables
