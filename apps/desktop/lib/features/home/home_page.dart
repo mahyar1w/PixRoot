@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> {
   int separator = 0;
   int totalDayTime = 0;
   Timer? timer;
+  bool _darkMode = false;
   bool _initialized = false;
 
   @override
@@ -181,13 +182,28 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     String username = context.read<AppState>().username ?? "User";
-    return Scaffold(
+    final theme = _darkMode
+        ? ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.grey,
+              brightness: Brightness.dark,
+            ),
+            fontFamily: "MyPixelFont",
+          )
+        : Theme.of(context);
+    return Theme(
+      data: theme,
+      child: Scaffold(
       appBar: AppBar(
         title: Center(child: Text("PixRoot")),
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.dark_mode, size: 24.27),
+            onPressed: () {
+              setState(() {
+                _darkMode = !_darkMode;
+              });
+            },
+            icon: Icon(_darkMode ? Icons.light_mode : Icons.dark_mode, size: 24.27),
           ),
         ],
       ),
@@ -370,6 +386,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    ),
     );
   }
 }

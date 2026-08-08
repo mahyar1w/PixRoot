@@ -51,6 +51,11 @@ Future<void> main() async {
     );
   }
 
+  // The daemon never exits on its own, so an instance left over from an
+  // earlier run (debug restarts, closed window) keeps holding the socket and
+  // stops answering requests. Kill it so the fresh spawn binds the socket.
+  await Process.run('pkill', ['-f', daemonPath]);
+
   await Process.start(daemonPath, []);
 
   final socket = PixrootSockets();
