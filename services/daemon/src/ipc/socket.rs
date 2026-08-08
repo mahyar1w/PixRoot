@@ -1,8 +1,7 @@
 use std::collections::{BTreeSet, HashMap};
-use std::fs;
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -16,25 +15,64 @@ use crate::ipc::struct_ser_to_cl::Interrupt;
 use crate::storage::repository;
 use crate::storage::rustqlite::db_path;
 
-const SOCKET_PATH: &str = "/tmp/focus_app.sock";
-
 /// `snapshot` is the shared, periodically updated list of currently open apps.
 /// Each client connection keeps the socket open after the request and streams
 /// `interrupt` events whenever a newly opened app matches the blocked list.
-pub fn start_socket_server(snapshot: OpenAppsSnapshot, active: Arc<AtomicBool>) {
-    let _ = fs::remove_file(SOCKET_PATH);
-    let listener = UnixListener::bind(SOCKET_PATH).expect("bind socket");
+///
+/// The daemon exits once the last client disconnects (after having served at
+/// least one). Closing the app therefore also tears down the socket, so a
+/// relaunch never hits a stale, unresponsive listener.
+pub fn start_socket_server(
+    listener: UnixListener,
+    snapshot: OpenAppsSnapshot,
+    active: Arc<AtomicBool>,
+) {
     println!("socket started");
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
+    listener.set_nonblocking(true).ok();
+
+    let clients = Arc::new(AtomicUsize::new(0));
+    let ever_connected = Arc::new(AtomicBool::new(false));
+
+    loop {
+        match listener.accept() {
+            Ok((stream, _)) => {
+                clients.fetch_add(1, Ordering::Relaxed);
+                ever_connected.store(true, Ordering::Relaxed);
                 let snapshot = Arc::clone(&snapshot);
                 let active = Arc::clone(&active);
-                thread::spawn(move || handle_client(stream, snapshot, active));
+                let guard = ClientGuard(Arc::clone(&clients));
+                thread::spawn(move || {
+                    let _guard = guard;
+                    handle_client(stream, snapshot, active);
+                });
             }
-            Err(e) => eprintln!("accept error: {}", e),
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {}
+            Err(e) => {
+                eprintln!("accept error: {}", e);
+                break;
+            }
         }
+
+        // Every client disconnected (and at least one was ever served): the
+        // app is gone. Stop the accept loop so main can unlink the socket and
+        // the process exits.
+        if ever_connected.load(Ordering::Relaxed) && clients.load(Ordering::Relaxed) == 0 {
+            println!("no clients connected, exiting");
+            break;
+        }
+
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+/// Decrements the client counter when the handler thread finishes, including
+/// on panic, so a crashed handler cannot keep the daemon alive forever.
+struct ClientGuard(Arc<AtomicUsize>);
+
+impl Drop for ClientGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::Relaxed);
     }
 }
 

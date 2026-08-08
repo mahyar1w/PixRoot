@@ -60,9 +60,14 @@ impl Sandbox {
 
     /// Start the socket server in a background thread and return its join handle.
     fn start_server(&self) -> thread::JoinHandle<()> {
-        let snapshot: OpenAppsSnapshot = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        use std::os::unix::net::UnixListener;
+        use std::sync::atomic::AtomicBool;
+        use std::sync::Arc;
+        let snapshot: OpenAppsSnapshot = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let active = Arc::new(AtomicBool::new(false));
+        let listener = UnixListener::bind(SOCKET_PATH).expect("bind socket");
         thread::spawn(move || {
-            database::ipc::socket::start_socket_server(snapshot);
+            database::ipc::socket::start_socket_server(listener, snapshot, active);
         })
     }
 
