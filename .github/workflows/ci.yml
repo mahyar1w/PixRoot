@@ -9,9 +9,6 @@ on:
 jobs:
   daemon-tests:
     runs-on: ubuntu-22.04
-    env:
-      # The daemon writes its DB to the XDG data dir, so keep test runs off the real one.
-      XDG_DATA_HOME: ${{ runner.temp }}/xdg
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
