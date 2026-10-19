@@ -3,7 +3,7 @@
 # Usage: packaging/linux/build-appimage.sh <path-to-appimagetool>
 #
 # <path-to-appimagetool> must be AppImageKit's appimagetool (the pinned 2023 "continuous" build
-# in release.yml). It packs with the classic libfuse2 runtime and xz, which AppImageLauncher 2.x
+# in release.yml). It packs with the classic libfuse2 runtime, which AppImageLauncher 2.x
 # can launch. appimagetool 1.9+ and the type2-runtime builds use a static runtime, and
 # AppImageLauncher fails to start AppImages built with it.
 set -euo pipefail
@@ -28,5 +28,7 @@ install -m 644 "$ROOT/packaging/linux/pixroot.desktop" "$APPDIR/usr/share/applic
 install -m 644 "$ROOT/packaging/linux/icons/pixroot.png" "$APPDIR/pixroot.png"
 install -m 644 "$ROOT/packaging/linux/icons/pixroot.png" "$APPDIR/usr/share/icons/hicolor/128x128/apps/pixroot.png"
 
-# xz: the classic runtime cannot read the zstd compression newer tools default to.
-ARCH=x86_64 "$APPTOOL" --comp xz "$APPDIR" "$ROOT/PixRoot-x86_64.AppImage"
+# gzip is the one compression every runtime we care about reads: the classic runtime
+# (AppImageLauncher) reads xz and gzip but not zstd, while AppImageHub's checker runtime
+# reads gzip and zstd but not xz.
+ARCH=x86_64 "$APPTOOL" --comp gzip "$APPDIR" "$ROOT/PixRoot-x86_64.AppImage"

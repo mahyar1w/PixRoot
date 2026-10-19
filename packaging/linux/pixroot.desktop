@@ -5,5 +5,5 @@ Comment=PixRoot - focus and productivity tracking
 Exec=AppRun
 Icon=pixroot
 Terminal=false
-Categories=Utility;Office;
+Categories=Utility;
 StartupNotify=true

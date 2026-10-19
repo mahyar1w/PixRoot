@@ -73,7 +73,7 @@ packaging/linux/build-appimage.sh ./appimagetool-x86_64.AppImage
 packaging/linux/smoke-test-appimage.sh PixRoot-x86_64.AppImage   # optional: launches it under Xvfb
 ```
 
-The script assembles the AppDir (Flutter bundle, the daemon named `database`, and `AppRun`, the desktop file and the icon from `packaging/linux/`) and packs it with xz.
+The script assembles the AppDir (Flutter bundle, the daemon named `database`, and `AppRun`, the desktop file and the icon from `packaging/linux/`) and packs it with gzip, the one compression that both AppImageLauncher's runtime and AppImageHub's checker can read.
 
 Use AppImageKit's tool, not the newer appimagetool 1.9+. Those builds use a static runtime that AppImageLauncher 2.x cannot launch, and clearing the AppImage marker to work around that stops launchers from recognizing the file.
 
