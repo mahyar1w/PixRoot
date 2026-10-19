@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish, e.g. v1.0.1. Leave empty to only build the artifact."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -48,19 +53,28 @@ jobs:
         working-directory: services/daemon
         run: cargo build --release
 
+      # AppImageKit's appimagetool (2023-03-08 build) packs with the classic runtime, which
+      # AppImageLauncher can launch. Do not switch to the appimagetool project's 1.9+ or any
+      # static type2-runtime: AppImageLauncher 2.x fails to start them, and stripping the
+      # AppImage marker to dodge that stops launchers from recognizing the file.
+      # The "continuous" URL is a moving name, so the checksum pins the exact file.
       - name: Download appimagetool
         run: |
           curl -fsSL -o "$RUNNER_TEMP/appimagetool" \
-            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          echo "b90f4a8b18967545fda78a445b27680a1642f1ef9488ced28b65398f2be7add2  $RUNNER_TEMP/appimagetool" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/appimagetool"
 
       - name: Assemble AppImage
         env:
-          # CI runners have no FUSE mount for the tool's own AppImage.
+          # Run the tool without mounting its own AppImage.
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: packaging/linux/build-appimage.sh "$RUNNER_TEMP/appimagetool"
 
       - name: Smoke-test AppImage launch
+        env:
+          # Hosted runners may not allow FUSE mounts; the runtime still runs the payload.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: packaging/linux/smoke-test-appimage.sh PixRoot-x86_64.AppImage
 
       - uses: actions/upload-artifact@v4
@@ -69,7 +83,13 @@ jobs:
           path: PixRoot-x86_64.AppImage
 
       - name: Attach to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.tag, 'v')
         uses: softprops/action-gh-release@v2
         with:
+          # A tag push uses its own tag; a manual run uses the tag input.
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          # Fail the run instead of publishing a release with no AppImage attached.
+          fail_on_unmatched_files: true
           files: PixRoot-x86_64.AppImage

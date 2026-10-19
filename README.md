@@ -61,54 +61,20 @@ chmod +x PixRoot-x86_64.AppImage
 
 The Flutter app spawns the daemon found next to itself (`usr/bin/database`), so no separate install is needed. Data still lands in `~/.local/share/pixroot/data.db`.
 
+AppImages need `libfuse2` (`fuse2` on Arch, `libfuse2` on Ubuntu). Without it, extract the file with `--appimage-extract` and run `squashfs-root/AppRun`.
+
 ### Building the AppImage yourself
 
-Requires [appimagetool](https://github.com/AppImage/AppImageKit). Build the release binaries first (see Release above), then:
+Build the release binaries first (see Release above). Then package with AppImageKit's [appimagetool](https://github.com/AppImage/AppImageKit/releases/tag/continuous) (the `continuous` build; `release.yml` pins its checksum):
 
 ```bash
-APP_DIR=/tmp/PixRoot.AppDir
-mkdir -p $APP_DIR/usr/bin $APP_DIR/usr/share/applications \
-         $APP_DIR/usr/share/icons/hicolor/256x256/apps
-
-# Flutter bundle + daemon (the daemon must keep the name `database`)
-cp -r apps/desktop/build/linux/x64/release/bundle/* $APP_DIR/usr/bin/
-cp services/daemon/target/release/database $APP_DIR/usr/bin/database
-
-# Icon
-cp art/exports/sprites/part1.png \
-   $APP_DIR/usr/share/icons/hicolor/256x256/apps/pixroot.png
-cp $APP_DIR/usr/share/icons/hicolor/256x256/apps/pixroot.png $APP_DIR/pixroot.png
+chmod +x appimagetool-x86_64.AppImage
+packaging/linux/build-appimage.sh ./appimagetool-x86_64.AppImage
+packaging/linux/smoke-test-appimage.sh PixRoot-x86_64.AppImage   # optional: launches it under Xvfb
 ```
 
-Create `$APP_DIR/AppRun`:
+The script assembles the AppDir (Flutter bundle, the daemon named `database`, and `AppRun`, the desktop file and the icon from `packaging/linux/`) and packs it with xz.
 
-```bash
-#!/bin/bash
-HERE="$(dirname "$(readlink -f "${0}")")"
-export LD_LIBRARY_PATH="${HERE}/usr/bin/lib:${LD_LIBRARY_PATH}"
-export PATH="${HERE}/usr/bin:${PATH}"
-exec "${HERE}/usr/bin/desktop" "$@"
-```
-
-Create `$APP_DIR/pixroot.desktop`:
-
-```ini
-[Desktop Entry]
-Type=Application
-Name=PixRoot
-Comment=PixRoot - focus and productivity tracking
-Exec=AppRun
-Icon=pixroot
-Terminal=false
-Categories=Utility;Office;
-StartupNotify=true
-```
-
-Package it:
-
-```bash
-chmod +x $APP_DIR/AppRun
-appimagetool $APP_DIR PixRoot-x86_64.AppImage
-```
+Use AppImageKit's tool, not the newer appimagetool 1.9+. Those builds use a static runtime that AppImageLauncher 2.x cannot launch, and clearing the AppImage marker to work around that stops launchers from recognizing the file.
 
 Note: `AppRun` does not start the daemon — the Flutter app spawns it (resolved relative to its own executable).

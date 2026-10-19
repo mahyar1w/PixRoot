@@ -1,18 +1,34 @@
 #!/usr/bin/env bash
 # Launches a packaged PixRoot under a virtual X server and checks that the app
 # stays up, spawns its daemon, and that the daemon's socket is listening.
+# Given an AppImage it also checks that launchers will still recognize the file
+# and runs the AppImage itself, so its runtime and mount are tested too.
 # Usage: packaging/linux/smoke-test-appimage.sh <PixRoot-x86_64.AppImage | PixRoot.AppDir>
 set -euo pipefail
 
 TARGET="$(realpath "${1:?usage: smoke-test-appimage.sh <AppImage or AppDir>}")"
 WORK="$(mktemp -d)"
-trap 'pkill -f "${APP:-$WORK}/" 2>/dev/null || true; rm -rf "$WORK"' EXIT
+APP_PID=""
+# The launch runs in its own process group (see below); stopping the group
+# stops Xvfb, the app and the daemon together.
+trap 'if [ -n "$APP_PID" ]; then kill -- "-$APP_PID" 2>/dev/null || true; fi; rm -rf "$WORK"' EXIT
+
+# Stops AppImageLauncher from opening its integration dialog during a headless run.
+export APPIMAGELAUNCHER_DISABLE=1
 
 if [ -d "$TARGET" ]; then
   APP="$TARGET"
+  LAUNCH="$APP/AppRun"
 else
+  # Bytes 8-10 hold "AI\x02", which is how AppImageLauncher and similar tools
+  # recognize an AppImage. Do not clear them to work around launcher problems.
+  if [ "$(od -An -tx1 -j8 -N3 "$TARGET" | tr -d ' ')" != "414902" ]; then
+    echo "FAIL: AppImage marker missing, launchers will not recognize this file" >&2
+    exit 1
+  fi
   (cd "$WORK" && "$TARGET" --appimage-extract >/dev/null)
   APP="$WORK/squashfs-root"
+  LAUNCH="$TARGET"
 fi
 
 # Every shared library must resolve on this host, or the app dies on first launch.
@@ -25,7 +41,7 @@ fi
 # Keep the daemon's database out of the real user data directory.
 export XDG_DATA_HOME="$WORK/xdg"
 
-xvfb-run -a "$APP/AppRun" >"$WORK/app.log" 2>&1 &
+setsid xvfb-run -a "$LAUNCH" >"$WORK/app.log" 2>&1 &
 APP_PID=$!
 
 # The app spawns the daemon and waits for its socket; give both time to come up.
@@ -36,7 +52,7 @@ if ! kill -0 "$APP_PID" 2>/dev/null; then
   echo "FAIL: app exited during startup" >&2
   exit 1
 fi
-if ! pgrep -f "$APP/usr/bin/database" >/dev/null; then
+if ! pgrep -g "$APP_PID" -x database >/dev/null; then
   cat "$WORK/app.log" >&2
   echo "FAIL: daemon was not spawned" >&2
   exit 1
