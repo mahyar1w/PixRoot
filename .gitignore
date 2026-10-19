@@ -2,5 +2,45 @@
 *.AppImage
 *.AppImage.new
 
-# AppImage extraction artifacts
+# AppImage extraction and packaging output
 squashfs-root/
+*.AppDir/
+dist/
+
+# Editor and OS files (anchored to the root so tracked subfolder files keep working)
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+*~
+*.bak
+*.swp
+*.swo
+\#*\#
+
+# Rust crates outside services/daemon
+**/target/
+
+# Python caches (art pipeline scripts)
+__pycache__/
+*.pyc
+
+# Local databases and sockets
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sock
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# Coverage reports
+coverage/
+lcov.info

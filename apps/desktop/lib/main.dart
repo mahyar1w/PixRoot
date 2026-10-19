@@ -54,7 +54,12 @@ Future<void> main() async {
   // The daemon never exits on its own, so an instance left over from an
   // earlier run (debug restarts, closed window) keeps holding the socket and
   // stops answering requests. Kill it so the fresh spawn binds the socket.
-  await Process.run('pkill', ['-f', daemonPath]);
+  // pkill is missing on some minimal systems; skip the cleanup there rather than crash.
+  try {
+    await Process.run('pkill', ['-f', daemonPath]);
+  } on ProcessException {
+    // Nothing to kill with; the daemon's own single-instance check still applies.
+  }
 
   await Process.start(daemonPath, []);
 

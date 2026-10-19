@@ -1,0 +1,75 @@
+name: Release AppImage
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # A release must not ship with failing tests.
+  tests:
+    uses: ./.github/workflows/ci.yml
+
+  appimage:
+    needs: tests
+    # Built on 22.04 so the AppImage's glibc requirement stays low.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev libfuse2 xvfb xauth
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.6
+          cache: true
+
+      - name: Build Flutter release bundle
+        working-directory: apps/desktop
+        run: |
+          flutter pub get
+          flutter build linux --release
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/daemon
+
+      - name: Build daemon release binary
+        working-directory: services/daemon
+        run: cargo build --release
+
+      - name: Download appimagetool
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool"
+
+      - name: Assemble AppImage
+        env:
+          # CI runners have no FUSE mount for the tool's own AppImage.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: packaging/linux/build-appimage.sh "$RUNNER_TEMP/appimagetool"
+
+      - name: Smoke-test AppImage launch
+        run: packaging/linux/smoke-test-appimage.sh PixRoot-x86_64.AppImage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PixRoot-x86_64.AppImage
+          path: PixRoot-x86_64.AppImage
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PixRoot-x86_64.AppImage

@@ -1,29 +1,33 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:desktop/app/app.dart';
+import 'package:desktop/features/welcome/welcome_page.dart';
+import 'package:desktop/services/socket/pixroot_sockets.dart';
+import 'package:desktop/services/socket/socket_manager.dart';
+import 'package:desktop/state/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+// Stands in for the daemon socket so the widget can build without a running daemon.
+class FakeSockets extends PixrootSockets {
+  @override
+  void listen(void Function(String) onData) {}
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const PixRootApp());
+  testWidgets('welcome page shows the email field and logo', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AppState()),
+          Provider(create: (_) => SocketManager(client: FakeSockets())),
+        ],
+        child: const MaterialApp(home: WelcomePage()),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
   });
 }

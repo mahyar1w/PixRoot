@@ -53,6 +53,9 @@ impl Sandbox {
         ));
         std::fs::create_dir_all(&dir).expect("create sandbox dir");
         std::env::set_current_dir(&dir).expect("chdir into sandbox");
+        // The DB lives under XDG_DATA_HOME, so point it at this sandbox, not the user's data.
+        // Safe: the socket lock above serializes every test that touches the environment.
+        unsafe { std::env::set_var("XDG_DATA_HOME", &dir) };
         rustqlite::init_db().expect("init db");
 
         Sandbox { dir, _guard: guard }
@@ -77,7 +80,10 @@ impl Sandbox {
         stream
             .set_read_timeout(Some(Duration::from_secs(2)))
             .ok();
-        stream.write_all(json.as_bytes()).expect("write request");
+        // The daemon frames messages by newline, same as the Flutter client.
+        stream
+            .write_all(format!("{json}\n").as_bytes())
+            .expect("write request");
         stream.flush().ok();
         // read response (server keeps connection open & streams events after,
         // so just read the first chunk, then drop the stream to disconnect).
@@ -156,10 +162,10 @@ fn check_email_exists_and_not_found() {
     seed_user("exists@b.com", "bob", "secret");
 
     let found = sb.request(r#"{"action":"check_email","payload":{"email":"exists@b.com"}}"#);
-    assert!(found.contains("\"status\":\"exists\""), "got: {found}");
+    assert!(found.contains("\"status\":\"ok\""), "got: {found}");
 
     let missing = sb.request(r#"{"action":"check_email","payload":{"email":"nope@b.com"}}"#);
-    assert!(missing.contains("\"status\":\"not_found\""), "got: {missing}");
+    assert!(missing.contains("\"status\":\"bad\""), "got: {missing}");
 }
 
 #[test]
@@ -221,10 +227,7 @@ fn save_session_requires_login() {
 
     // No user logged in -> server reports no account.
     let r = sb.request(r#"{"action":"save_session","payload":{"success":true,"time":42}}"#);
-    assert!(
-        r.contains("\"status\":\"no acount logined\"") || r.contains("\"status\":\"error\""),
-        "got: {r}"
-    );
+    assert!(r.contains("\"status\":\"no account logged\""), "got: {r}");
 }
 
 #[test]
@@ -296,7 +299,7 @@ fn unknown_action_is_ignored() {
     let mut stream = connect_with_retry();
     stream.set_read_timeout(Some(Duration::from_millis(300))).ok();
     stream
-        .write_all(b"{\"action\":\"frobnicate\",\"payload\":{}}")
+        .write_all(b"{\"action\":\"frobnicate\",\"payload\":{}}\n")
         .unwrap();
     stream.flush().ok();
     let mut buf = [0u8; 64];
@@ -311,7 +314,7 @@ fn malformed_json_is_rejected() {
 
     let mut stream = connect_with_retry();
     stream.set_read_timeout(Some(Duration::from_millis(300))).ok();
-    stream.write_all(b"not json at all").unwrap();
+    stream.write_all(b"not json at all\n").unwrap();
     stream.flush().ok();
     let mut buf = [0u8; 64];
     let n = stream.read(&mut buf).unwrap_or(0);
